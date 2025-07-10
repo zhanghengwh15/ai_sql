@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 # MySQL数据库规范
 
@@ -11,6 +11,9 @@ alwaysApply: true
 - 【强制】所有表名、字段名必须加注释，且命名需与实际含义一致
 - 【推荐】表命名、字段命名不使用拼音，更不推荐使用拼音首字母
 - 【强制】表名不使用复数名词
+- 【强制】项目相关表名必须添加项目前缀，格式：项目前缀_表名
+  - 正例：yt_user_info（燕塘业务用户表），yt_order_detail（燕塘业务订单详情表）
+  - 反例：user_info（缺少项目前缀），ytuser_info（前缀格式错误）
 - 【强制】表名、字段名必须使用小写字母或数字，禁止数字开头，禁止两个下划线中间只出现数字
   - 正例：getter_admin，task_config，level3_name
   - 反例：GetterAdmin，taskConfig，level_3_name
@@ -128,11 +131,12 @@ alwaysApply: true
 
 ### 4.1 标准表结构
 ```sql
-CREATE TABLE `example_table` (
+-- 燕塘业务示例表结构
+CREATE TABLE `yt_user_info` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '名称',
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '用户名称',
   `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '状态：1-启用，0-禁用',
-  `amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '金额',
+  `amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '账户余额',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `modify_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   `rec_status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
@@ -140,12 +144,12 @@ CREATE TABLE `example_table` (
   `create_by` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '创建人ID',
   `modify_by` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '修改人ID',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='示例表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='燕塘业务用户信息表';
 
 -- 后续根据业务查询需求添加索引，例如：
--- ALTER TABLE `example_table` ADD KEY `idx_org_id` (`org_id`);
--- ALTER TABLE `example_table` ADD KEY `idx_org_status` (`org_id`, `status`);
--- ALTER TABLE `example_table` ADD UNIQUE KEY `uk_org_name` (`org_id`, `name`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_id` (`org_id`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_status` (`org_id`, `status`);
+-- ALTER TABLE `yt_user_info` ADD UNIQUE KEY `uk_org_name` (`org_id`, `name`);
 ```
 
 ### 4.2 索引命名示例
@@ -164,8 +168,8 @@ UNIQUE KEY `uk_code_org_id` (`code`, `org_id`)
 
 #### 4.3.1 复合索引设计示例
 ```sql
--- 用户表索引设计示例（建表时只创建主键索引）
-CREATE TABLE `user_info` (
+-- 燕塘业务用户表索引设计示例（建表时只创建主键索引）
+CREATE TABLE `yt_user_info` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `org_id` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '机构ID',
   `user_code` varchar(50) NOT NULL DEFAULT '' COMMENT '用户编码',
@@ -178,53 +182,53 @@ CREATE TABLE `user_info` (
   `modify_by` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '修改人ID',
   `modify_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='燕塘业务用户信息表';
 
 -- 后续根据业务查询需求添加索引（通过ALTER TABLE添加）
 -- 1. 按机构查询用户列表
--- ALTER TABLE `user_info` ADD KEY `idx_org_id` (`org_id`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_id` (`org_id`);
 
 -- 2. 按机构+状态查询用户
--- ALTER TABLE `user_info` ADD KEY `idx_org_status` (`org_id`, `status`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_status` (`org_id`, `status`);
 
 -- 3. 按机构+用户类型查询
--- ALTER TABLE `user_info` ADD KEY `idx_org_type` (`org_id`, `user_type`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_type` (`org_id`, `user_type`);
 
 -- 4. 防止同一机构下用户编码重复
--- ALTER TABLE `user_info` ADD UNIQUE KEY `uk_org_user_code` (`org_id`, `user_code`);
+-- ALTER TABLE `yt_user_info` ADD UNIQUE KEY `uk_org_user_code` (`org_id`, `user_code`);
 
 -- 5. 按机构+创建时间排序查询
--- ALTER TABLE `user_info` ADD KEY `idx_org_create_time` (`org_id`, `create_time`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_create_time` (`org_id`, `create_time`);
 
 -- 6. 按机构+状态+创建时间查询
--- ALTER TABLE `user_info` ADD KEY `idx_org_status_create_time` (`org_id`, `status`, `create_time`);
+-- ALTER TABLE `yt_user_info` ADD KEY `idx_org_status_create_time` (`org_id`, `status`, `create_time`);
 ```
 
 #### 4.3.2 索引使用场景分析
 ```sql
 -- 场景1：多租户等值查询 + 范围查询
 -- 索引：idx_org_status_create_time (org_id, status, create_time)
-SELECT * FROM user_info 
+SELECT * FROM yt_user_info 
 WHERE org_id = 100 AND status = 1 AND create_time > '2024-01-01';
 -- 分析：org_id作为第一列确保多租户隔离，status使用等值查询，create_time使用范围查询
 
 -- 场景2：多租户排序查询
 -- 索引：idx_org_create_time (org_id, create_time)
-SELECT * FROM user_info 
+SELECT * FROM yt_user_info 
 WHERE org_id = 100 
 ORDER BY create_time DESC;
 -- 分析：org_id确保多租户隔离，利用索引消除排序，提高查询性能
 
 -- 场景3：多租户唯一性约束
 -- 索引：uk_org_user_code (org_id, user_code)
-INSERT INTO user_info (org_id, user_code, name) VALUES (100, 'USER001', '张三');
+INSERT INTO yt_user_info (org_id, user_code, name) VALUES (100, 'USER001', '张三');
 -- 分析：确保同一机构下用户编码唯一，不同机构可以有相同编码
 
 -- 场景4：避免索引失效
 -- 错误示例：函数运算导致索引失效
-SELECT * FROM user_info WHERE org_id = 100 AND DATE(create_time) = '2024-01-01';
+SELECT * FROM yt_user_info WHERE org_id = 100 AND DATE(create_time) = '2024-01-01';
 -- 正确示例：使用范围查询
-SELECT * FROM user_info WHERE org_id = 100 AND create_time >= '2024-01-01 00:00:00' AND create_time < '2024-01-02 00:00:00';
+SELECT * FROM yt_user_info WHERE org_id = 100 AND create_time >= '2024-01-01 00:00:00' AND create_time < '2024-01-02 00:00:00';
 ```
 
 #### 4.3.3 索引优化建议
@@ -249,14 +253,14 @@ KEY `idx_org_status_type_create_time` (`org_id`, `status`, `user_type`, `create_
 
 -- 3. 合理使用覆盖索引
 -- 索引：idx_org_status_type (org_id, status, user_type)
-SELECT org_id, status, user_type FROM user_info WHERE org_id = 100;
+SELECT org_id, status, user_type FROM yt_user_info WHERE org_id = 100;
 -- 分析：查询字段都在索引中，无需回表查询
 
 -- 4. 避免索引列运算
 -- 错误示例
-SELECT * FROM user_info WHERE org_id + 1 = 101;
+SELECT * FROM yt_user_info WHERE org_id + 1 = 101;
 -- 正确示例
-SELECT * FROM user_info WHERE org_id = 100;
+SELECT * FROM yt_user_info WHERE org_id = 100;
 ```
 
 ## 5. 查询优化建议
