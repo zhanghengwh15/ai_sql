@@ -1,6 +1,6 @@
-# Agents
+# Agents Configuration
 
-This file is managed by openskills. Do not edit manually.
+This file is used to register and sync OpenSkills for this project.
 
 <skills_system priority="1">
 
@@ -23,12 +23,6 @@ Usage notes:
 </usage>
 
 <available_skills>
-
-<skill>
-<name>database-design</name>
-<description>数据库架构设计专家，将业务流程转化为数据库模式。当用户需要设计数据库表结构、分析业务实体关系、创建数据库模式文档时使用此技能。适用于企业级工业软件项目的数据库设计，能够根据业务流程设计符合第三范式的数据库结构，并提供详细的表结构、字段类型、关系图和设计说明。</description>
-<location>project</location>
-</skill>
 
 <skill>
 <name>skill-creator</name>
