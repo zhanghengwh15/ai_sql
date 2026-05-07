@@ -1,6 +1,3 @@
----
-alwaysApply: false
----
 # MySQL数据库规范
 
 ## 1. SQL上线流程规范

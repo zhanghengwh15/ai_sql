@@ -184,7 +184,3 @@ WHERE org_id = #{orgId}
 - [ ] 重要操作是否使用了事务
 
 记住：**整洁的SQL不一定是高效的SQL，但高效的SQL一定是整洁的。让每个看到你SQL的人都能快速理解你的意图。**
-description:
-globs:
-alwaysApply: false
----
