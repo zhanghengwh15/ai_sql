@@ -9,11 +9,11 @@ description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQ
 
 把"一次性、长 SQL、写入 + 回写状态"的批处理脚本，重写为：
 
-1. 临时表 A：锁定本次要处理的原始数据 ID 范围
+1. 临时表 A：锁定本次要处理的原始数据 ID 范围（可按业务**扩列**：`id` + 关联键 + 写入载荷，减少二次临时表）
 2. 数据预处理：在原始表上做必要的字段补全
-3. 临时表 B (Staging)：存放真正通过所有校验的数据（聚合 / JSON 拼装等）
-4. 写入最终表：从 Staging 表 INSERT 到目标表
-5. 回写状态：**只回写真正进入 Staging 的记录**，未通过校验的不回写
+3. 临时表 B (Staging)：**可选**。存在聚合、`JSON_ARRAYAGG`、多步派生、或 INSERT 目标结构复杂时，用 Staging 承载「通过校验后的成功子集」
+4. 写入最终表：从 Staging `INSERT` / `UPDATE`，或见下「免 Staging」时对业务表直接 `UPDATE ... JOIN`
+5. 回写状态：**只回写与「成功子集」约束一致的记录**（`JOIN Staging` **或** `INNER JOIN` 目标业务表且条件等价），未通过校验的不回写
 6. 收尾：删除全部临时表
 
 ## 编写硬性规范（必须遵守）
@@ -31,10 +31,24 @@ description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQ
 - 【强制】`ORDER BY id` 配合 LIMIT，保证可重入、可断点续跑
 
 ### 3. 状态回写的逻辑安全
-- 【强制】**只回写真正进入 Staging 表的记录**：`UPDATE ... SET cal_status = 2` 必须 `JOIN staging_tmp` 来约束范围
-- 【强制】**禁止**仅依据"本次锁定范围"（临时表 A）就把状态置为已完成 —— 因为未通过校验的记录不应被标记成功
+- 【强制】**成功子集与回写范围必须一致**：`UPDATE ... SET 完成态` 时，生效行必须等价于「真正处理成功」的行；约束方式二选一（或组合）：
+  - **Staging 表**：`JOIN staging_tmp`，且 Staging 内仅为通过校验的数据；
+  - **免 Staging、直接 JOIN 原业务表**：`UPDATE 同步表 d JOIN 范围_tmp s ... INNER JOIN 目标业务表 t ON <关联键>`，使**只有关联命中**的同步行 / 业务行被更新；效果与「先算 Staging 再 JOIN」相同。
+- 【强制】**禁止**仅依据「本次锁定范围」（仅有 `id` 的范围临时表、且 **UPDATE 中未** `INNER JOIN` 业务成功条件 / Staging）就把状态置为已完成 —— 未命中业务表或未通过校验的记录不得标记成功。
 - 【强制】回写时同步更新 `modify_time`、`modify_by`（参考项目 MySQL 规范）
-- 【推荐】对未进入 Staging 的"被遗漏"记录，可单独 UPDATE 为"待重试 / 异常"状态（如 `cal_status = 3`），便于追踪
+- 【推荐】对未进入成功子集（未进 Staging 或未命中业务 `JOIN`）的「被锁定」记录，可单独 `UPDATE` 为「待重试 / 异常」状态（如 `cal_status = 3`），便于追踪
+
+### 3.1 免 Staging：扩列范围表 + 原表 INNER JOIN（经验沉淀）
+
+当本批**无聚合、无 JSON 拼装、无多步中间结果**，仅做「同步表 ↔ 业务表」键上更新时，**不必再建第二张 Staging 临时表**：
+
+1. **范围临时表扩列**：`CREATE TEMPORARY TABLE ..._scope_tmp AS SELECT id, 关联键列, 写入所需载荷列 ... FROM 源表 WHERE ... 时间窗口 ORDER BY id LIMIT N`，一次锁定并带上 `UPDATE` 要用的字段（避免重复扫源表条件，且批次内载荷固定）。
+2. **业务表 `UPDATE`**：`UPDATE 业务表 t JOIN ..._scope_tmp s ON t.键 = s.键 JOIN 源表 d ON d.id = s.id SET ...`，并用 `d` 上仍为「待处理」的状态条件防止并发重复改。
+3. **同步状态回写**：`UPDATE 源表 d JOIN ..._scope_tmp s ... INNER JOIN 业务表 t ON ... SET 完成态`，与第 2 步 **同一套命中条件**，保证「能置完成态」当且仅当「业务侧已命中」。
+
+**仍须遵守**：范围表的 `CREATE ... AS SELECT` 带**时间窗口** + **`LIMIT`** + **`ORDER BY id`**；头尾 `DROP` 所有临时表。
+
+**仍建 Staging 的典型情况**：按单号 `GROUP BY` 聚合明细、`JSON_ARRAYAGG`、去重子查询结果集较大、或 INSERT 列来自多表拼接 —— 继续用两段式（范围 + Staging）更清晰、易验证。
 
 ### 4. MySQL 8 函数使用
 本技能默认运行环境为 **MySQL 8**，可放心使用：
@@ -46,7 +60,10 @@ description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQ
 - `ROW_NUMBER() OVER (PARTITION BY ...)` 等窗口函数
 
 ### 5. 分步 SELECT 验证语句（必须附带）
-每个临时表创建之后、每个 INSERT/UPDATE 之前，必须在注释块中给出对应的"调试用 SELECT"，方便上线前手工对数。详见 [references/validation-template.md](references/validation-template.md)。
+每个临时表创建之后、每个 INSERT/UPDATE 之前，必须给出对应的**调试用 SELECT**，方便上线前手工对数。详见 [references/validation-template.md](references/validation-template.md)。
+
+- 【强制】验证用 SQL 必须写在 **`/* ... */` 块注释**里（块内为可执行 `SELECT`），**不要用**行首 `--` 逐行注释验证语句 —— 运维复制到客户端时，去掉最外层 `/*` `*/` 即可整段执行，避免逐行删 `--`。
+- 块首行用简短标题标注「验证 SQL-1」…便于与 [validation-template.md](references/validation-template.md) 对应。
 
 ## 输出模板（直接套用）
 
@@ -59,8 +76,8 @@ description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQ
 -- 目标表：  {{yt_xxx_finsh_data}}
 -- 触发方式：{{定时任务 / 手动 / 事件触发}}
 -- 作者：    {{name}}    日期：{{YYYY-MM-DD}}
--- 说明：    采用临时表两段式（范围表 + Staging 表）模式，
---          只回写真正通过校验的记录，避免脏状态。
+-- 说明：    默认两段式（范围表 + Staging）；无聚合/JSON 时可改为
+--          「扩列范围表 + UPDATE INNER JOIN 业务表」，见 §3.1。
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -84,10 +101,13 @@ CREATE TEMPORARY TABLE yt_xxx_original_data_tmp AS (
   LIMIT 5000                                                     -- 【强制】LIMIT 兜底
 );
 
--- 【验证 SQL-1】确认本次锁定的范围（上线前手工执行）
--- SELECT COUNT(*) AS lock_cnt FROM yt_xxx_original_data_tmp;
--- SELECT * FROM yt_xxx_original_data
---  WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp) LIMIT 20;
+/* 验证 SQL-1：确认本次锁定的范围（执行前去掉本块首尾块注释定界符）
+SELECT COUNT(*) AS lock_cnt FROM yt_xxx_original_data_tmp;
+SELECT *
+FROM yt_xxx_original_data
+WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp)
+LIMIT 20;
+*/
 
 -- ---------------------------------------------------------------------
 -- 2. 数据预处理：补全字段（仅对本次范围操作）
@@ -102,11 +122,12 @@ SET entry_store_location_code = CASE
     modify_time = NOW()
 WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp);
 
--- 【验证 SQL-2】确认补全结果，重点关注 entry_store_location_code 是否仍为 NULL
--- SELECT entry_store_location_code, COUNT(*) AS cnt
---   FROM yt_xxx_original_data
---  WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp)
---  GROUP BY entry_store_location_code;
+/* 验证 SQL-2：补全结果（关注 entry_store_location_code 是否仍为 NULL）
+SELECT entry_store_location_code, COUNT(*) AS cnt
+FROM yt_xxx_original_data
+WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp)
+GROUP BY entry_store_location_code;
+*/
 
 -- ---------------------------------------------------------------------
 -- 3. 临时表 B (Staging)：只放真正通过所有校验的数据
@@ -141,11 +162,12 @@ CREATE TEMPORARY TABLE yt_xxx_staging_tmp AS (
   LIMIT 5000                                                     -- 【强制】LIMIT 兜底
 );
 
--- 【验证 SQL-3】对比锁定范围与最终通过校验的记录数，差额即"被过滤掉的"
--- SELECT
---   (SELECT COUNT(*) FROM yt_xxx_original_data_tmp)  AS locked_cnt,
---   (SELECT COUNT(*) FROM yt_xxx_staging_tmp)        AS passed_cnt;
--- SELECT * FROM yt_xxx_staging_tmp LIMIT 5;
+/* 验证 SQL-3：锁定范围 vs Staging（差额即被过滤、不应回写成功）
+SELECT
+  (SELECT COUNT(*) FROM yt_xxx_original_data_tmp) AS locked_cnt,
+  (SELECT COUNT(*) FROM yt_xxx_staging_tmp)       AS passed_cnt;
+SELECT * FROM yt_xxx_staging_tmp LIMIT 5;
+*/
 
 -- ---------------------------------------------------------------------
 -- 4. 写入最终表：从 Staging 表写入
@@ -170,14 +192,18 @@ ON DUPLICATE KEY UPDATE
   docket_detail_list = VALUES(docket_detail_list),
   modify_time        = NOW();
 
--- 【验证 SQL-4】抽样核对最终表是否正确写入
--- SELECT f.* FROM yt_xxx_finsh_data f
---   JOIN yt_xxx_staging_tmp s ON f.docket_code = s.docket_code LIMIT 5;
+/* 验证 SQL-4：最终表写入抽样
+SELECT f.*
+FROM yt_xxx_finsh_data f
+JOIN yt_xxx_staging_tmp s ON f.docket_code = s.docket_code
+LIMIT 5;
+*/
 
 -- ---------------------------------------------------------------------
--- 5. 状态回写：【只回写真正进入 Staging 的记录】
---    - 严禁仅根据临时表 A（锁定范围）就把状态置为已完成
---    - 未通过校验的记录保持 cal_status = 1（或单独标记重试）
+-- 5. 状态回写：【成功子集与 JOIN 条件一致】
+--    - 若用 Staging：只回写 JOIN staging 的记录
+--    - 若免 Staging：UPDATE 源表时 INNER JOIN 与步骤 4 相同的业务表命中条件
+--    - 严禁仅根据范围临时表 id 列表就把状态置为已完成
 -- ---------------------------------------------------------------------
 UPDATE yt_xxx_original_data m
 JOIN yt_xxx_staging_tmp staging
@@ -187,18 +213,26 @@ SET m.cal_status  = 2,
 WHERE m.entry_store_location_code IS NOT NULL
   AND m.id IN (SELECT id FROM yt_xxx_original_data_tmp);
 
--- 【可选】把"被锁定但未通过校验"的记录单独标记为待重试（cal_status = 3）
+-- 【可选】把「被锁定但未通过校验」的记录单独标记为待重试（cal_status = 3）
 -- UPDATE yt_xxx_original_data
 --    SET cal_status  = 3,
 --        modify_time = NOW()
 --  WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp)
---    AND cal_status = 1;   -- 仍然是"待处理"说明上一步没回写为 2
+--    AND cal_status = 1;
 
--- 【验证 SQL-5】回写完成后的状态分布
--- SELECT cal_status, COUNT(*) AS cnt
---   FROM yt_xxx_original_data
---  WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp)
---  GROUP BY cal_status;
+/* 验证 SQL-5：回写后状态分布与反向脏数据检查
+SELECT cal_status, COUNT(*) AS cnt
+FROM yt_xxx_original_data
+WHERE id IN (SELECT id FROM yt_xxx_original_data_tmp)
+GROUP BY cal_status;
+
+SELECT m.id, m.docket_code, m.cal_status
+FROM yt_xxx_original_data m
+LEFT JOIN yt_xxx_staging_tmp s ON m.docket_code = s.docket_code
+WHERE m.id IN (SELECT id FROM yt_xxx_original_data_tmp)
+  AND s.docket_code IS NULL
+  AND m.cal_status = 2;
+*/
 
 -- ---------------------------------------------------------------------
 -- 6. 收尾：清理临时表
@@ -215,8 +249,8 @@ DROP TEMPORARY TABLE IF EXISTS yt_xxx_staging_tmp;
    - [ ] 头部 DROP TEMPORARY TABLE 是否完整覆盖所有临时表？
    - [ ] 尾部 DROP TEMPORARY TABLE 是否完整覆盖所有临时表？
    - [ ] 每个 CREATE TEMPORARY TABLE 是否同时带 `modify_time` 时间窗口和 `LIMIT`？
-   - [ ] 状态回写 UPDATE 是否 JOIN 了 Staging 表（而不是只用范围临时表 A）？
-   - [ ] 是否给出了至少 5 条分步 SELECT 验证 SQL（锁定范围、补全结果、范围 vs Staging 数量对比、最终表抽样、状态分布）？
+   - [ ] 状态回写 / 完成态 UPDATE 是否与「成功子集」一致（`JOIN Staging`，或 **`INNER JOIN` 业务表且与业务 UPDATE 条件等价**，而不是仅用范围表 `id IN (...)` 置成功）？
+   - [ ] 是否给出了至少 5 组验证用 `SELECT`（锁定范围、补全结果、范围 vs 成功子集数量对比、最终表抽样、状态分布），且均以 **`/* ... */` 块**写在脚本中便于复制执行？
    - [ ] 所有 SQL 关键字大写、字段加反引号、注释清楚？
    - [ ] 多租户场景：是否在过滤条件里带了 `org_id`？
 4. 详细的"分步验证 SELECT"模板见 [references/validation-template.md](references/validation-template.md)
