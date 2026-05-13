@@ -47,14 +47,21 @@
 
 #### Scenario: 业务记录进入非活跃状态
 - **WHEN** 用户、商品、优惠券、订单、支付、库存记录、售后单、后台账号、运营配置、幂等记录或领域事件进入非活跃或终态
-- **THEN** 系统更新状态字段，而不是物理删除行或设置 `deleted_at`
+- **THEN** 系统更新状态字段，而不是物理删除行
 
 ### Requirement: 基础字段保持一致
-系统 SHALL 为每张业务表定义一致的基础字段：`id`、`created_at`、`updated_at` 和 `deleted_at`，其中 `deleted_at` 仅保留用于技术兼容，不作为正常业务生命周期字段。
+系统 SHALL 为每张业务表定义一致的基础字段：`id`、`created_at` 和 `updated_at`。
 
 #### Scenario: 新增业务表
 - **WHEN** 小程序数据库结构新增业务表
-- **THEN** 该表包含带注释和合理默认值的 `id`、`created_at`、`updated_at` 和 `deleted_at` 字段
+- **THEN** 该表包含带注释和合理默认值的 `id`、`created_at` 和 `updated_at` 字段
+
+### Requirement: 商品图集使用独立关系表
+系统 SHALL 使用独立关系表维护商品与图片资产的有序关联，而不是在商品记录中存储图集 JSON 数组。
+
+#### Scenario: 维护商品图集
+- **WHEN** 运营人员新增、排序或删除商品图集图片
+- **THEN** 系统通过商品图集关系表维护商品与 `image_assets` 的关联和顺序
 
 ### Requirement: 不声明数据库外键
 系统 SHALL 文档化表关系并为关联字段建立索引，但 SHALL NOT 声明数据库级外键约束。

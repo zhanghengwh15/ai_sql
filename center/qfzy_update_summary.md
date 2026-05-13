@@ -3,8 +3,7 @@
 已按最终确认口径整理：
 
 - 全部 `org_id = 1000936`
-- 明细未开始：`task_id IS NULL`
-- 明细从 `2026-1` 调整为 `2025-4`
+- 明细未下发：`task_id IS NULL`，按同 `pit_id` 已完成最新记录的轮次 `+1`
 - 工单按 `task_id` 映射：`round='2026-1' -> '2025-4'`（来源条件：`annual=2026 and current_round=1`）
 - 窖池按 `pit_id` 映射：更新为 `round='2025-5'`（来源条件同样为 `annual=2026 and current_round=1`，且 `task_id > 0`、`completion_time IS NOT NULL`）
 
@@ -24,18 +23,39 @@ WHERE org_id = 1000936
   AND task_id IS NULL;
 ```
 
-### 1.2 执行更新（2026-1 -> 2025-4）
+### 1.2 执行更新（按 `pit_id` 最新已完成轮次 +1）
 
 ```sql
-UPDATE pct_strong_aromatic_brewing_plan_detail
-SET annual = 2025,
-    current_round = 4,
-    modify_time = NOW()
-WHERE org_id = 1000936
-  AND annual = 2026
-  AND rec_status = 1
-  AND current_round = 1
-  AND task_id IS NULL;
+UPDATE pct_strong_aromatic_brewing_plan_detail p
+JOIN (
+  SELECT pit_id, annual, current_round
+  FROM (
+    SELECT p2.pit_id,
+           p2.annual,
+           p2.current_round,
+           ROW_NUMBER() OVER (
+             PARTITION BY p2.pit_id
+             ORDER BY p2.completion_time DESC, p2.id DESC
+           ) AS rn
+    FROM pct_strong_aromatic_brewing_plan_detail p2
+    WHERE p2.org_id = 1000936
+      AND p2.rec_status = 1
+      AND p2.task_id > 0
+      AND p2.completion_time IS NOT NULL
+      AND p2.pit_id > 0
+  ) t
+  WHERE t.rn = 1
+) latest
+  ON latest.pit_id = p.pit_id
+SET p.annual = latest.annual,
+    p.current_round = latest.current_round + 1,
+    p.modify_time = NOW()
+WHERE p.org_id = 1000936
+  AND p.annual = 2026
+  AND p.rec_status = 1
+  AND p.current_round = 1
+  AND p.task_id IS NULL
+  AND p.pit_id > 0;
 ```
 
 ### 1.3 更新后复查
@@ -45,9 +65,30 @@ SELECT id, org_id, annual, current_round, task_id, pit_id
 FROM pct_strong_aromatic_brewing_plan_detail
 WHERE org_id = 1000936
   AND rec_status = 1
-  AND annual = 2025
-  AND current_round = 4
-  AND task_id IS NULL;
+  AND task_id IS NULL
+  AND pit_id > 0
+  AND (annual, current_round) IN (
+    SELECT latest.annual, latest.current_round + 1
+    FROM (
+      SELECT pit_id, annual, current_round
+      FROM (
+        SELECT p2.pit_id,
+               p2.annual,
+               p2.current_round,
+               ROW_NUMBER() OVER (
+                 PARTITION BY p2.pit_id
+                 ORDER BY p2.completion_time DESC, p2.id DESC
+               ) AS rn
+        FROM pct_strong_aromatic_brewing_plan_detail p2
+        WHERE p2.org_id = 1000936
+          AND p2.rec_status = 1
+          AND p2.task_id > 0
+          AND p2.completion_time IS NOT NULL
+          AND p2.pit_id > 0
+      ) t
+      WHERE t.rn = 1
+    ) latest
+  );
 ```
 
 ---
