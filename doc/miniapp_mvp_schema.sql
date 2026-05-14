@@ -660,3 +660,202 @@ CREATE TABLE `idempotency_records` (
   KEY `idx_idempotency_records_biz` (`biz_type`, `biz_no`),
   KEY `idx_idempotency_records_expired_at` (`expired_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='幂等记录表';
+
+-- =====================================================
+-- 基础增删改查测试（建议在测试库执行）
+-- 说明：
+-- 1) 本项目约束“保留记录”，删除动作使用状态更新模拟，不执行物理 DELETE
+-- 2) 以下语句用于快速验证建表后核心链路的可用性
+-- =====================================================
+
+-- 可选：切换到测试库
+-- CREATE DATABASE IF NOT EXISTS miniapp_mvp_test DEFAULT CHARACTER SET utf8mb4;
+-- USE miniapp_mvp_test;
+
+-- -------- 1. 用户/地址基础测试 --------
+-- C: 新增用户
+INSERT INTO `users` (`openid`, `nickname`, `avatar_url`, `mobile`, `status`, `last_login_at`)
+VALUES ('openid_test_001', '测试用户A', 'https://example.com/a.png', '13800000001', 1, NOW());
+
+-- R: 查询用户
+SELECT `id`, `openid`, `nickname`, `status`, `created_at`, `updated_at`
+FROM `users`
+WHERE `openid` = 'openid_test_001';
+
+-- U: 更新用户昵称
+UPDATE `users`
+SET `nickname` = '测试用户A-改'
+WHERE `openid` = 'openid_test_001';
+
+-- D(逻辑): 禁用用户（状态流转替代物理删除）
+UPDATE `users`
+SET `status` = 2
+WHERE `openid` = 'openid_test_001';
+
+-- 新增地址（依赖刚创建用户）
+INSERT INTO `user_addresses` (
+  `user_id`, `receiver_name`, `receiver_phone`,
+  `province_code`, `city_code`, `district_code`,
+  `address_detail`, `is_default`, `status`
+)
+SELECT `id`, '张三', '13800000001', '440000', '440100', '440106', '天河路 100 号', 1, 1
+FROM `users` WHERE `openid` = 'openid_test_001';
+
+-- -------- 2. 商品/SKU/图集关系测试 --------
+INSERT INTO `categories` (`parent_id`, `name`, `icon_image_id`, `sort_order`, `status`)
+VALUES (0, '测试分类', 0, 1, 1);
+
+INSERT INTO `brands` (`name`, `logo_image_id`, `status`)
+VALUES ('测试品牌A', 0, 1);
+
+INSERT INTO `products` (
+  `spu_code`, `category_id`, `brand_id`, `name`, `sub_title`,
+  `main_image_id`, `publish_status`, `audit_status`, `sort_order`
+)
+SELECT
+  'SPU_TEST_001', c.`id`, b.`id`, '测试商品A', '副标题A',
+  0, 2, 2, 10
+FROM `categories` c, `brands` b
+WHERE c.`name` = '测试分类' AND b.`name` = '测试品牌A'
+LIMIT 1;
+
+INSERT INTO `product_skus` (
+  `product_id`, `sku_code`, `spec_snapshot`,
+  `sale_price`, `market_price`, `cost_price`, `status`
+)
+SELECT
+  p.`id`, 'SKU_TEST_001',
+  JSON_OBJECT('color', 'black', 'size', 'M'),
+  99.9000000, 129.9000000, 70.0000000, 1
+FROM `products` p
+WHERE p.`spu_code` = 'SPU_TEST_001';
+
+-- 商品图集关系（验证独立关系表）
+INSERT INTO `image_assets` (
+  `bucket_name`, `object_key`, `origin_file_name`, `content_type`,
+  `file_size`, `width`, `height`, `checksum`, `asset_type`,
+  `url`, `cdn_url`, `uploader_id`, `status`, `metadata`
+)
+VALUES (
+  'test-bucket', 'products/spu_test_001_1.jpg', 'spu_test_001_1.jpg', 'image/jpeg',
+  10240, 800, 800, 'md5_test_001', 'product',
+  'https://example.com/products/spu_test_001_1.jpg',
+  'https://cdn.example.com/products/spu_test_001_1.jpg',
+  1, 1, JSON_OBJECT('scene', 'product_gallery')
+);
+
+INSERT INTO `product_image_relations` (`product_id`, `image_asset_id`, `sort_order`, `status`)
+SELECT p.`id`, i.`id`, 1, 1
+FROM `products` p, `image_assets` i
+WHERE p.`spu_code` = 'SPU_TEST_001'
+  AND i.`object_key` = 'products/spu_test_001_1.jpg'
+LIMIT 1;
+
+-- -------- 3. 购物车/订单测试 --------
+INSERT INTO `cart_items` (
+  `user_id`, `sku_id`, `quantity`, `checked`,
+  `price_snapshot`, `sku_snapshot`, `status`
+)
+SELECT
+  u.`id`, s.`id`, 2, 1,
+  s.`sale_price`, JSON_OBJECT('sku_code', s.`sku_code`), 1
+FROM `users` u, `product_skus` s
+WHERE u.`openid` = 'openid_test_001'
+  AND s.`sku_code` = 'SKU_TEST_001'
+LIMIT 1;
+
+INSERT INTO `orders` (
+  `order_no`, `user_id`, `order_status`, `pay_status`, `shipment_status`,
+  `items_amount`, `discount_amount`, `freight_amount`, `payable_amount`, `paid_amount`,
+  `address_snapshot`, `remark`, `expire_at`, `paid_at`
+)
+SELECT
+  'ORDER_TEST_001', u.`id`, 1, 1, 1,
+  199.8000000, 0.0000000, 10.0000000, 209.8000000, 0.0000000,
+  JSON_OBJECT('receiver_name', '张三', 'phone', '13800000001', 'address', '天河路 100 号'),
+  '测试订单',
+  DATE_ADD(NOW(), INTERVAL 30 MINUTE),
+  '1970-01-01 08:00:00'
+FROM `users` u
+WHERE u.`openid` = 'openid_test_001'
+LIMIT 1;
+
+INSERT INTO `order_items` (
+  `order_id`, `order_no`, `product_id`, `sku_id`,
+  `sku_name`, `sku_spec_snapshot`, `quantity`,
+  `unit_price`, `discount_amount`, `pay_amount`
+)
+SELECT
+  o.`id`, o.`order_no`, p.`id`, s.`id`,
+  p.`name`, s.`spec_snapshot`, 2,
+  s.`sale_price`, 0.0000000, 199.8000000
+FROM `orders` o
+JOIN `product_skus` s ON s.`sku_code` = 'SKU_TEST_001'
+JOIN `products` p ON p.`id` = s.`product_id`
+WHERE o.`order_no` = 'ORDER_TEST_001';
+
+-- 更新订单为已支付（模拟支付成功）
+UPDATE `orders`
+SET `pay_status` = 2, `order_status` = 2, `paid_amount` = 209.8000000, `paid_at` = NOW()
+WHERE `order_no` = 'ORDER_TEST_001';
+
+-- 查询订单与明细
+SELECT o.`order_no`, o.`order_status`, o.`pay_status`, o.`payable_amount`, oi.`sku_id`, oi.`quantity`
+FROM `orders` o
+JOIN `order_items` oi ON oi.`order_id` = o.`id`
+WHERE o.`order_no` = 'ORDER_TEST_001';
+
+-- -------- 4. 发货与物流测试 --------
+INSERT INTO `shipments` (
+  `order_id`, `order_no`, `shipment_no`,
+  `carrier_code`, `carrier_name`, `waybill_no`, `express_sheet_no`,
+  `shipment_status`, `pickup_status`, `cancel_status`,
+  `track_pull_status`, `last_track_pull_at`, `next_track_pull_at`, `delivered_at`
+)
+SELECT
+  o.`id`, o.`order_no`, 'SHP_TEST_001',
+  'YTO', '圆通', 'WB_TEST_001', 'ES_TEST_001',
+  3, 1, 1,
+  1, '1970-01-01 08:00:00', NOW(), '1970-01-01 08:00:00'
+FROM `orders` o
+WHERE o.`order_no` = 'ORDER_TEST_001'
+LIMIT 1;
+
+INSERT INTO `shipment_tracks` (
+  `shipment_id`, `order_no`, `waybill_no`, `track_time`,
+  `track_status`, `track_desc`, `location`, `raw_payload`
+)
+SELECT
+  s.`id`, s.`order_no`, s.`waybill_no`, NOW(),
+  'IN_TRANSIT', '快件已发出', '广州分拨中心', JSON_OBJECT('source', 'manual_test')
+FROM `shipments` s
+WHERE s.`shipment_no` = 'SHP_TEST_001';
+
+INSERT INTO `shipment_notify_logs` (
+  `shipment_id`, `order_no`, `template_id`, `notify_type`, `notify_status`,
+  `retry_count`, `next_retry_at`, `request_payload`, `response_payload`
+)
+SELECT
+  s.`id`, s.`order_no`, 'tmpl_test_001', 1, 2,
+  0, '1970-01-01 08:00:00',
+  JSON_OBJECT('message', '已发货'),
+  JSON_OBJECT('result', 'ok')
+FROM `shipments` s
+WHERE s.`shipment_no` = 'SHP_TEST_001';
+
+-- 未揽收取消面单（模拟删除语义）
+UPDATE `shipments`
+SET `cancel_status` = 3, `shipment_status` = 5
+WHERE `shipment_no` = 'SHP_TEST_001'
+  AND `pickup_status` = 1;
+
+-- -------- 5. 索引检查示例（用于 4.4）--------
+-- SHOW INDEX FROM `orders`;
+-- SHOW INDEX FROM `shipments`;
+-- SHOW INDEX FROM `shipment_tracks`;
+
+-- -------- 6. 可选清理（测试后执行）--------
+-- 注意：为了满足“保留记录”约束，以下清理推荐改为状态流转而非 DELETE
+-- UPDATE `orders` SET `order_status` = 5 WHERE `order_no` = 'ORDER_TEST_001';
+-- UPDATE `products` SET `publish_status` = 3 WHERE `spu_code` = 'SPU_TEST_001';
+-- UPDATE `users` SET `status` = 2 WHERE `openid` = 'openid_test_001';
