@@ -48,6 +48,7 @@ LEFT JOIN (
     FROM `poit-product`.produce_work_order pwo
     WHERE pwo.rec_status = 1
       AND pwo.pit_id > 0
+      AND pwo.`round` LIKE '2025-%'
       AND pwo.`round` REGEXP '^[0-9]+-[0-9]+$'
   ) t
   WHERE t.rn = 1
@@ -81,6 +82,7 @@ JOIN (
   FROM `poit-product`.produce_work_order pwo
   WHERE pwo.rec_status = 1
     AND pwo.pit_id > 0
+    AND pwo.`round` LIKE '2025-%'
     AND pwo.`round` REGEXP '^[0-9]+-[0-9]+$'
   GROUP BY pwo.pit_id
 ) w ON w.pit_id = p.pit_id
