@@ -5,7 +5,7 @@
 -- 创建时间：2026-06-03
 -- =============================================================
 
-CREATE TABLE `produce_work_order_main` (
+CREATE TABLE `yt_produce_work_order` (
   `id`           bigint(20) unsigned NOT NULL AUTO_INCREMENT     COMMENT '主键ID',
 
   `doc_no`       varchar(64)  NOT NULL DEFAULT ''                COMMENT '单据编号（业务单号，全局唯一）',
@@ -22,7 +22,6 @@ CREATE TABLE `produce_work_order_main` (
   `modify_time`  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP
                               ON UPDATE CURRENT_TIMESTAMP        COMMENT '修改时间',
   `rec_status`   tinyint(4)   NOT NULL DEFAULT 1                 COMMENT '记录状态：1-有效，0-删除',
-
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='生产工单主表';
