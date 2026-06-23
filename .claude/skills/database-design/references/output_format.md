@@ -22,11 +22,15 @@
 
 | 字段名 | 类型 | 约束 | 默认值 | 说明 |
 |--------|------|------|--------|------|
-| id | BIGINT UNSIGNED | PRIMARY KEY, NOT NULL, AUTO_INCREMENT | - | 主键ID |
-| user_id | BIGINT UNSIGNED | NOT NULL | - | 用户ID |
-| status | TINYINT | NOT NULL | 1 | 状态：1-正常，2-禁用 |
-| created_at | TIMESTAMP | NOT NULL | CURRENT_TIMESTAMP | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | CURRENT_TIMESTAMP | 更新时间 |
+| id | BIGINT(20) UNSIGNED | PRIMARY KEY, NOT NULL, AUTO_INCREMENT | - | 主键ID |
+| user_id | BIGINT(20) UNSIGNED | NOT NULL | 0 | 用户ID |
+| status | TINYINT(4) | NOT NULL | 1 | 状态：1-正常，2-禁用 |
+| create_time | DATETIME | NOT NULL | CURRENT_TIMESTAMP | 创建时间 |
+| modify_time | DATETIME | NOT NULL | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 修改时间 |
+| rec_status | TINYINT(4) | NOT NULL | 1 | 记录状态：1-有效，0-删除 |
+| org_id | BIGINT(20) UNSIGNED | NOT NULL | 0 | 机构ID |
+| create_by | BIGINT(20) UNSIGNED | NOT NULL | 0 | 创建人ID |
+| modify_by | BIGINT(20) UNSIGNED | NOT NULL | 0 | 修改人ID |
 
 **索引**:
 - PRIMARY KEY (id)
@@ -40,15 +44,23 @@
 ### SQL建表语句格式
 
 ```sql
-CREATE TABLE table_name (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
-    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-正常，2-禁用',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    INDEX idx_user_id (user_id),
-    INDEX idx_status (status)
+CREATE TABLE `yt_table_name` (
+    `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '用户ID',
+    `status` TINYINT(4) NOT NULL DEFAULT 1 COMMENT '状态：1-正常，2-禁用',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `modify_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+    `rec_status` TINYINT(4) NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
+    `org_id` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '机构ID',
+    `create_by` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建人ID',
+    `modify_by` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改人ID',
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='表说明';
+
+-- 后续根据业务查询需求添加索引，例如：
+-- ALTER TABLE `yt_table_name` ADD KEY `idx_org_id` (`org_id`);
+-- ALTER TABLE `yt_table_name` ADD KEY `idx_org_user_id` (`org_id`, `user_id`);
+-- ALTER TABLE `yt_table_name` ADD UNIQUE KEY `uk_org_email` (`org_id`, `email`);
 ```
 
 ## ER图格式（Mermaid）
@@ -61,19 +73,25 @@ erDiagram
     ORDERS ||--|{ ORDER_ITEMS : "contains"
     PRODUCTS ||--o{ ORDER_ITEMS : "included_in"
     
-    USERS {
-        bigint id PK
+    YT_USER_INFO {
+        bigint(20) unsigned id PK
         varchar username
         varchar email
-        timestamp created_at
+        datetime create_time
+        datetime modify_time
+        tinyint(4) rec_status
+        bigint(20) unsigned org_id
     }
     
-    ORDERS {
-        bigint id PK
-        bigint user_id FK
-        decimal total_amount
-        tinyint status
-        timestamp created_at
+    YT_ORDER_INFO {
+        bigint(20) unsigned id PK
+        bigint(20) unsigned user_id FK
+        decimal(10,2) total_amount
+        tinyint(4) status
+        datetime create_time
+        datetime modify_time
+        tinyint(4) rec_status
+        bigint(20) unsigned org_id
     }
     
     ORDER_ITEMS {
@@ -151,7 +169,7 @@ erDiagram
 1. **用户表设计**
    - 使用自增ID作为主键，保证插入性能
    - 邮箱和用户名设置唯一索引，确保唯一性
-   - 使用软删除（deleted_at），保留历史数据
+   - 使用软删除（rec_status），保留历史数据
 
 2. **订单表设计**
    - 订单号使用唯一索引，支持快速查询
