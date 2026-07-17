@@ -34,8 +34,7 @@
 
 **索引**:
 - PRIMARY KEY (id)
-- INDEX idx_user_id (user_id)
-- INDEX idx_status (status)
+- 初始化建表不创建其他索引
 
 **关联关系**:
 - 关联 users 表（user_id -> users.id），一对多关系
@@ -56,11 +55,6 @@ CREATE TABLE `yt_table_name` (
     `modify_by` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改人ID',
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='表说明';
-
--- 后续根据业务查询需求添加索引，例如：
--- ALTER TABLE `yt_table_name` ADD KEY `idx_org_id` (`org_id`);
--- ALTER TABLE `yt_table_name` ADD KEY `idx_org_user_id` (`org_id`, `user_id`);
--- ALTER TABLE `yt_table_name` ADD UNIQUE KEY `uk_org_email` (`org_id`, `email`);
 ```
 
 ## ER图格式（Mermaid）
@@ -123,7 +117,9 @@ erDiagram
 - PK表示主键，FK表示外键（虽然不设置外键约束，但要标注）
 - 关系线要清晰标注关系类型
 
-## 索引设计说明格式
+## 后续索引优化说明格式
+
+初始化数据库设计文档不得包含本节。表上线后，只有在已有真实查询、慢查询日志或 `EXPLAIN` 结果时，才单独输出索引优化说明和变更SQL。
 
 ```markdown
 ## 索引设计说明
@@ -168,25 +164,24 @@ erDiagram
 
 1. **用户表设计**
    - 使用自增ID作为主键，保证插入性能
-   - 邮箱和用户名设置唯一索引，确保唯一性
+   - 初始化阶段由应用层校验邮箱和用户名唯一性，后续按实际需求评估唯一索引
    - 使用软删除（rec_status），保留历史数据
 
 2. **订单表设计**
-   - 订单号使用唯一索引，支持快速查询
+   - 初始化阶段由应用层校验订单号唯一性，后续按实际需求评估唯一索引
    - 金额使用DECIMAL类型，确保精度
    - 状态字段使用TINYINT，节省存储空间
 
 3. **关联关系设计**
    - 不设置数据库外键约束，由应用层维护数据完整性
-   - 所有关联字段都创建索引，提高查询性能
+   - 初始化阶段不为关联字段创建索引
    - 使用中间表处理多对多关系
 
 ### 性能考虑
 
 1. **索引策略**
-   - 为所有外键字段创建索引
-   - 为频繁查询的字段创建索引
-   - 使用复合索引优化常见查询模式
+   - 初始化建表只创建主键索引
+   - 表上线后根据真实查询和执行计划单独添加索引
 
 2. **字段类型优化**
    - 选择最小合适的类型
@@ -261,11 +256,7 @@ erDiagram
 
 [ER图...]
 
-## 5. 索引设计
-
-[索引说明...]
-
-## 6. 设计说明
+## 5. 设计说明
 
 [设计思路和注意事项...]
 ```
@@ -275,7 +266,7 @@ erDiagram
 - [ ] 是否包含所有表的完整结构？
 - [ ] 字段类型、约束、默认值是否完整？
 - [ ] 是否包含ER关系图？
-- [ ] 索引设计是否说明清楚？
+- [ ] 初始化建表是否只创建主键索引，且未附带候选索引SQL？
 - [ ] 设计思路是否阐述清楚？
 - [ ] SQL建表语句是否可以直接执行？
 - [ ] 文档格式是否规范统一？

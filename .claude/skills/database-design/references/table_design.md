@@ -162,14 +162,15 @@ id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID'
 
 ### UNIQUE约束
 
-**原则**: 确保字段值唯一
+**原则**: UNIQUE约束会隐式创建唯一索引，因此初始化建表时禁止使用。初始化阶段由应用层校验业务唯一性；表上线后再根据实际需求通过独立变更添加。
 
 ```sql
-email VARCHAR(100) NOT NULL DEFAULT '' UNIQUE COMMENT '邮箱'
+ALTER TABLE `yt_user_info`
+ADD UNIQUE KEY `uk_org_email` (`org_id`, `email`);
 ```
 
-**注意**: 
-- 唯一约束会自动创建唯一索引
+**注意**:
+- 以上语法仅用于后续索引变更，不得写入初始化 `CREATE TABLE`
 - 多租户环境下，唯一性约束必须包含org_id，确保跨租户数据独立性
 - 唯一索引命名：`uk_前缀 + 枚举所有列（全小写）`
 
@@ -255,11 +256,6 @@ CREATE TABLE `yt_user_info` (
   `modify_by` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改人ID',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='燕塘业务用户信息表';
-
--- 后续根据业务查询需求添加索引，例如：
--- ALTER TABLE `yt_user_info` ADD KEY `idx_org_id` (`org_id`);
--- ALTER TABLE `yt_user_info` ADD KEY `idx_org_status` (`org_id`, `status`);
--- ALTER TABLE `yt_user_info` ADD UNIQUE KEY `uk_org_email` (`org_id`, `email`);
 ```
 
 ### 订单表（多租户）
@@ -282,16 +278,12 @@ CREATE TABLE `yt_order_info` (
   `modify_by` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改人ID',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='燕塘业务订单信息表';
-
--- 后续根据业务查询需求添加索引，例如：
--- ALTER TABLE `yt_order_info` ADD KEY `idx_org_user_id` (`org_id`, `user_id`);
--- ALTER TABLE `yt_order_info` ADD KEY `idx_org_status` (`org_id`, `status`);
--- ALTER TABLE `yt_order_info` ADD UNIQUE KEY `uk_order_no` (`order_no`);
 ```
 
 ### 索引设计说明
 
 - 【强制】建表时只创建主键索引，不创建其他索引，避免提前设计导致的索引冗余
+- 【强制】初始化设计文档和建表脚本不输出候选索引、UNIQUE约束或`ALTER TABLE ... ADD KEY`语句
 - 【强制】多租户环境下，所有业务查询索引必须包含org_id字段作为第一列
 - 【强制】索引设计基于实际业务查询场景，通过慢查询日志和EXPLAIN分析确定
 - 索引命名规范：

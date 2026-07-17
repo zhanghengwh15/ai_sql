@@ -142,11 +142,6 @@ CREATE TABLE `yt_user_info` (
   `modify_by` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '修改人ID',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='燕塘业务用户信息表';
-
--- 后续根据业务查询需求添加索引，例如：
--- ALTER TABLE `yt_user_info` ADD KEY `idx_org_id` (`org_id`);
--- ALTER TABLE `yt_user_info` ADD KEY `idx_org_status` (`org_id`, `status`);
--- ALTER TABLE `yt_user_info` ADD UNIQUE KEY `uk_org_name` (`org_id`, `name`);
 ```
 
 ### 4.2 索引命名示例
