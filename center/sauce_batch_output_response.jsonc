@@ -1,0 +1,32 @@
+{
+  "code": 75200, // 响应码，Number；响应参数表未列出
+  "data": [ // 批次产量列表，Array<Object>；响应参数表未列出包裹字段 data
+    {
+      "teamName": "YX制曲1班", // 班组名称，String
+      "materialName": "广式大曲", // 物料名称，String
+      "batchNo": "CT20260314BD00-01", // 批次号，String
+      "batchEndTime": "2026-03-14 10:33:22", // 批次结束时间，String；文档格式：date-time，示例格式：yyyy-MM-dd HH:mm:ss
+      "quantity": 4.5, // 批次量，Number
+      "unitName": "吨", // 单位名称，String
+      "unitCode": "TNE", // 单位编码，String
+      "lineName": "传统制曲产线", // 生产线，String
+      "teamCode": "320601010201", // 班组编码，String
+      "materialCode": "FJ01000038", // 物料编码，String
+      "batchStartTime": "2026-03-14 10:33:22" // 批次开始时间，String；文档格式：date-time，示例格式：yyyy-MM-dd HH:mm:ss
+    },
+    {
+      "teamName": "YX制曲1班", // 班组名称，String
+      "materialName": "广式大曲", // 物料名称，String
+      "batchNo": "CT20260314BD00-02", // 批次号，String
+      "batchEndTime": "2026-03-14 14:35:31", // 批次结束时间，String；文档格式：date-time，示例格式：yyyy-MM-dd HH:mm:ss
+      "quantity": 66, // 批次量，Number
+      "unitName": "吨", // 单位名称，String
+      "unitCode": "TNE", // 单位编码，String
+      "lineName": "传统制曲产线", // 生产线，String
+      "teamCode": "320601010201", // 班组编码，String
+      "materialCode": "FJ01000038", // 物料编码，String
+      "batchStartTime": "2026-03-14 14:35:31" // 批次开始时间，String；文档格式：date-time，示例格式：yyyy-MM-dd HH:mm:ss
+    }
+  ],
+  "msg": "成功" // 响应消息，String；响应参数表未列出
+}
