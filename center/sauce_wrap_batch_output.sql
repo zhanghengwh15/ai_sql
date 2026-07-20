@@ -1,11 +1,11 @@
 -- =============================================================
--- 表名：mes_sauce_batch_output（酱油批次产量中台表）
+-- 表名：mes_sauce_wrap_batch_output（包装批次产量中台表）
 -- 数据库：MySQL 8
--- 来源：GET /api/fm-product-manage/batchOutput/sauce
--- 说明：承接酱油种曲、制曲、配制、调配批次产量数据
+-- 来源：GET /api/fm-product-manage/batchOutput/sauce/wrap
+-- 说明：承接包装批次产量数据
 -- =============================================================
 
-CREATE TABLE `mes_sauce_batch_output` (
+CREATE TABLE `mes_sauce_wrap_batch_output` (
   `id`               bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
 
   `work_date`        date          NOT NULL COMMENT '生产日期，对应请求参数 workDate',
@@ -28,6 +28,6 @@ CREATE TABLE `mes_sauce_batch_output` (
                                             ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '中台记录修改时间',
   `rec_status`       tinyint(4)    NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
 
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='【mes】 酱油种曲、制曲、配制、调配批次产量中台表';
+  COMMENT='【mes】 包装批次产量中台表';

@@ -1,11 +1,11 @@
 -- =============================================================
--- 表名：mes_sauce_batch_output（酱油批次产量中台表）
+-- 表名：mes_sauce_disk_batch_output（产线圆盘批次产量中台表）
 -- 数据库：MySQL 8
--- 来源：GET /api/fm-product-manage/batchOutput/sauce
--- 说明：承接酱油种曲、制曲、配制、调配批次产量数据
+-- 来源：GET /api/fm-product-manage/batchOutput/sauce/disk
+-- 说明：承接产线圆盘批次产量数据
 -- =============================================================
 
-CREATE TABLE `mes_sauce_batch_output` (
+CREATE TABLE `mes_sauce_disk_batch_output` (
   `id`               bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
 
   `work_date`        date          NOT NULL COMMENT '生产日期，对应请求参数 workDate',
@@ -17,6 +17,7 @@ CREATE TABLE `mes_sauce_batch_output` (
   `material_code`    varchar(100)  NOT NULL DEFAULT '' COMMENT '物料编码，对应 materialCode',
   `material_name`    varchar(255)  NOT NULL DEFAULT '' COMMENT '物料名称，对应 materialName',
   `quantity`         decimal(18,6) NOT NULL DEFAULT 0.000000 COMMENT '批次量，对应 quantity',
+  `source_no`        varchar(100)  NOT NULL DEFAULT '' COMMENT '圆盘号，对应 sourceNo',
 
   `team_code`        varchar(64)   NOT NULL DEFAULT '' COMMENT '班组编码，对应 teamCode',
   `team_name`        varchar(100)  NOT NULL DEFAULT '' COMMENT '班组名称，对应 teamName',
@@ -28,6 +29,6 @@ CREATE TABLE `mes_sauce_batch_output` (
                                             ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '中台记录修改时间',
   `rec_status`       tinyint(4)    NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
 
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='【mes】 酱油种曲、制曲、配制、调配批次产量中台表';
+  COMMENT='【mes】 产线圆盘批次产量中台表';
