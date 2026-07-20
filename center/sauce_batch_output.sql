@@ -28,6 +28,6 @@ CREATE TABLE `mes_sauce_batch_output` (
                                             ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '中台记录修改时间',
   `rec_status`       tinyint(4)    NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
 
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='【mes】 酱油种曲、制曲、配制、调配批次产量中台表';
