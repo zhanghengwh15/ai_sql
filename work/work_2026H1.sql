@@ -18,11 +18,7 @@ WHERE
         and taskExtend.actual_release_date <= NOW()
         and taskExtend.actual_release_date >= '2026-01-10 00:00:00'
         and task.task_id not in ('6625c13b4b5e9976fb05934c','6659abbba373bd35c927dfc4','6625c0979ecd35c103531833')
-and content like '%小糊涂仙%'
-;
-
-
-
+and content like '%小糊涂仙%';
 
 -- 技术支持类
 SELECT
