@@ -1,0 +1,61 @@
+[
+  {
+    "organizationId": "1-33100104", // 所属部门，String；部门 code；响应示例字段为 organizationId，参数表写作 organzationId
+    "username": "00011973", // 员工工号，String
+    "fullname": "袁俊灏", // 员工名称，String
+    "typeId": "EMPLOYEE", // 类型，String；枚举示例：EMPLOYEE=正式员工，1001=其他人员-自建，11=内退人员，99=外来人员，1000=外部人员，03=实习人员，05=实习结束人员，09=总公司下派人员，10=未入职人员，04=离职人员，999=第三方员工（在岗），998=第三方员工（离岗），0301=认知实习，02=试用人员，0302=跟岗实习，07=返聘人员，08=返聘结束人员，06=退休人员，0303=顶岗实习
+    "identityCard": "{ENC-VR}FKd1JpydzYHrvYHyyiS7Gg9QgCp7amSC8mhEErzRzYQdekdO9Wflia6RJpQW9YmRvhxDGCkfN9Sr+dDm4frHtNJjdVDGLVcVUmdpuuVs", // 身份证号，String；示例值为加密内容
+    "isDisabled": false, // 是否禁用，Boolean；false=启用，true=禁用
+    "email": "{ENC-VR}oZ6qWy7e+qgp3Iu9qlArFt5NboA3eUynjXewPi1+jFm+yC7xPVYcT5MV+aUit+yL+CRHVVOg2bc5blEVtRSLk86dpqH1DphDrpkdthg=", // 邮箱，String；示例值为加密内容
+    "mobile": "{ENC-VR}BoXRlRNsIC9fxsEXFC70qJwEduQFadeEgq/5YRvXt5Ueo9YT/59cBC5PMM9hZXiV5kZMgQ/CD8nOgsY5I0MrrYniBqOJNZo=", // 手机号码，String；示例值为加密内容
+    "changePasswordAt": "2026-04-29 20:11:30.551", // 修改密码时间，String；示例格式：yyyy-MM-dd HH:mm:ss.SSS；响应参数表未列出
+    "createAt": "2026-04-02 17:39:46.879", // 创建时间，String；格式：yyyy-MM-dd HH:mm:ss.SSS
+    "updateAt": "2026-04-29 20:11:30.619", // 更新时间，String；格式：yyyy-MM-dd HH:mm:ss.SSS
+    "changePasswordMust": false, // 是否必须修改密码，Boolean；响应参数表未列出
+    "isDeleted": false, // 是否删除，Boolean；响应参数表未列出
+    "zzProcessStatus": "FINISHED", // 流程状态，String；响应参数表未列出
+    "birthdate": "1990-12-14", // 生日，String；格式：yyyy-MM-dd
+    "companyId": "1", // 所属组织，String；组织 code
+    "creationtime": "2017-07-23 20:20:38.000", // NC创建时间，String；示例格式：yyyy-MM-dd HH:mm:ss.SSS；响应参数表未列出
+    "fullpostId": "012682", // 用户主岗，String；单值
+    "idtype": "1001Z01000000000AI36", // 证件类型，String
+    "jobclassname": "销售类(S)", // 职类名称，String
+    "jobcode": "0501", // 新职务编码，String
+    "jobcompanyId": "101", // 合同主体单位，String
+    "jobglbdef62": "1001A110000003IDIFE3", // 人员属性，String
+    "joblevel": "3", // 新职级名称，String
+    "joblevelcode": "ZJ018", // 新职级编码，String
+    "jobname": "无", // 新职务名称，String
+    "joindate": "2015-11-06", // 入职日期，String；格式：yyyy-MM-dd
+    "mz": "汉族", // 民族，String
+    "ncdata": "", // NC原始数据，String；示例为空字符串
+    "partdeptId": [], // 用户兼职部门，Array；多值
+    "partpostId": [], // 用户兼岗，Array；多值
+    "user_exists": true, // 是否存在用户，Boolean
+    "xl": "大专", // 学历，String
+    "xw": "无学位", // 学位，String
+    "zy": "计算机，机械加工", // 专业，String
+    "gender": "1", // 性别，String；1=男，2=女
+    "weChatWorkId": "00011973", // 微信号，String
+    "_AID": "0001A11000000000761S", // NC主键，String
+    "_BID": "20260402173946879-7D5E-BD71F2E45", // 业务主键，String；响应参数表未列出
+    "_ID": "00011973", // 用户标识，String；响应参数表未列出
+    "userJobs": [ // 用户岗位关系列表，Array<Object>；响应参数表未列出
+      {
+        "data": {}, // 扩展数据，Object；响应参数表未列出
+        "id": "20260402173946904-4DF0-D3B3BBEC5", // 用户岗位关系ID，String；响应参数表未列出
+        "userId": "20260402173946879-7D5E-BD71F2E45", // 用户ID，String；响应参数表未列出
+        "organizationId": "20260402161031925-5B4D-A5086EF3E", // 组织ID，String；响应参数表未列出
+        "organizationTreeId": "000000000000000000000000SORGT001", // 组织树ID，String；响应参数表未列出
+        "relation": "BELONG", // 组织关系类型，String；响应参数表未列出
+        "createBy": "bbcadmin", // 创建人，String；响应参数表未列出
+        "createAt": "2026-04-02 17:39:46.000", // 创建时间，String；示例格式：yyyy-MM-dd HH:mm:ss.SSS；响应参数表未列出
+        "isDeleted": false, // 是否删除，Boolean；响应参数表未列出
+        "isDisable": 0, // 是否禁用，Number；示例为 0/1 数值标记，响应参数表未列出
+        "isLocked": 0, // 是否锁定，Number；示例为 0/1 数值标记，响应参数表未列出
+        "sequence": 0 // 排序号，Number；响应参数表未列出
+      }
+    ],
+    "_BORGID": "20260402161031925-5B4D-A5086EF3E" // 所属组织内部ID，String；响应参数表未列出
+  }
+]

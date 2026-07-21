@@ -33,14 +33,11 @@ CREATE TABLE `mid_iam_organization` (
 
   `source_create_at`    datetime(3)           DEFAULT NULL COMMENT '接口记录创建时间，对应 createAt',
   `source_update_at`    datetime(3)           DEFAULT NULL COMMENT '接口记录更新时间，对应 updateAt，增量同步游标',
-
   `create_time`         datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '中台记录创建时间',
   `modify_time`         datetime(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                                            ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '中台记录修改时间',
   `rec_status`          tinyint(4)   NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
-
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_mid_iam_organization_external_id` (`external_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='IAM组织中台表';
 
