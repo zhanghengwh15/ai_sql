@@ -47,7 +47,7 @@ description: 企业级数据库架构设计专家，将业务流程转化为高�
 
 - **字段类型选择**: 根据数据特性和MySQL8/PostgreSQL特性选择合适类型
 - **主键设计**: 优先使用自增ID或UUID，考虑分表分库场景
-- **约束设计**: NOT NULL、CHECK等约束；初始化建表不创建会隐式生成索引的UNIQUE约束
+- **约束设计**: NOT NULL、CHECK等约束；初始化建表不创建会隐式生成索引的UNIQUE约束；中台对接表除明确必填字段外，默认允许为NULL
 - **默认值**: 设置合理的默认值
 - **注释**: 为每个字段添加清晰的注释说明
 
@@ -131,14 +131,14 @@ description: 企业级数据库架构设计专家，将业务流程转化为高�
 - **分页查询**: 考虑LIMIT/OFFSET的性能问题，设计支持主键分页（`WHERE id > #{lastId} LIMIT #{pageSize}`）
 - **批量操作**: 表结构设计支持批量插入和更新
 - **事务支持**: 确保表结构支持事务操作
-- **多租户支持**: 所有业务表必须包含org_id字段，确保数据隔离
+- **多租户支持**: 后端业务表必须包含org_id字段，确保数据隔离；中台对接表不要求org_id，但必须包含eid字段（VARCHAR(64)）
 
 ## 与MySQL数据库规范的一致性
 
 本技能的数据库设计严格遵循 `references/mysql-database-standards.md` 中的规范，包括：
 
-1. **建表规约**: 所有表必须包含标准字段（id、create_time、modify_time、rec_status、org_id、create_by、modify_by）
-2. **字段规范**: 所有字段必须设置NOT NULL和默认值，禁止NULL值
+1. **建表规约**: 后端业务表必须包含标准字段（id、create_time、modify_time、rec_status、org_id、create_by、modify_by）；中台对接表不要求org_id，但必须包含eid（VARCHAR(64)）
+2. **字段规范**: 后端业务表字段必须设置NOT NULL和默认值；中台对接表除明确必填字段外，默认允许NULL，避免外部对接数据形态不确定导致入库失败
 3. **索引设计**: 初始化建表只创建主键索引，不输出其他索引或候选索引SQL；后续根据真实业务查询单独添加
 4. **SQL规范**: 使用大写关键字，字段名用反引号包围，避免使用外键和存储过程
 5. **性能优化**: 合理使用数据类型，避免函数运算，优化查询模式
@@ -147,11 +147,11 @@ description: 企业级数据库架构设计专家，将业务流程转化为高�
 
 在完成数据库设计后，必须检查以下项目：
 
-- [ ] 所有表是否包含标准字段（id、create_time、modify_time、rec_status、org_id、create_by、modify_by）
-- [ ] 所有字段是否设置了NOT NULL和合理的默认值
+- [ ] 后端业务表是否包含标准字段（id、create_time、modify_time、rec_status、org_id、create_by、modify_by）；中台对接表是否包含eid（VARCHAR(64)）且不强制org_id
+- [ ] 后端业务表字段是否设置了NOT NULL和合理的默认值；中台对接表非必填字段是否允许NULL
 - [ ] 表名和字段名是否符合命名规范
 - [ ] 初始化建表是否只包含PRIMARY KEY，未包含KEY、UNIQUE KEY、FULLTEXT或候选索引SQL
-- [ ] 多租户环境下是否包含org_id条件
+- [ ] 后端多租户场景是否包含org_id条件；中台对接表是否按业务需要使用eid条件
 - [ ] 字符集是否统一为utf8mb4
 - [ ] 是否避免了使用enum、set、blob、text等不推荐类型
 - [ ] 是否符合mysql-database-standards.md中的其他规范
@@ -188,6 +188,16 @@ org_id BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '机构ID'
 ```
 
 **注意**: 多租户环境下，所有业务查询必须包含org_id条件。初始化建表不为org_id创建索引；后续确需业务索引时，org_id必须作为第一列。
+
+### 中台对接表模式
+
+中台对接表用于承接外部系统同步或推送的数据，字段约束必须更宽松：
+
+```sql
+eid VARCHAR(64) NOT NULL DEFAULT '' COMMENT '企业ID'
+```
+
+**注意**: 中台对接表不要求 `org_id` 字段。除 `id`、明确必填字段、审计/状态等内部控制字段外，其他来自中台的数据字段默认允许 `NULL`，不要强制 `NOT NULL DEFAULT`，避免因外部字段缺失或数据形态不确定导致入库失败。
 
 ### 版本控制模式
 

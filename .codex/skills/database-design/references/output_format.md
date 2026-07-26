@@ -13,6 +13,8 @@
 
 ### 标准格式
 
+**注意**: 后端业务表使用 `org_id` 和 `NOT NULL DEFAULT` 规范；中台对接表不强制 `org_id`，必须包含 `eid VARCHAR(64)`，且除明确必填字段外，外部数据字段默认允许 `NULL`。
+
 ```markdown
 ### 表名 (table_name)
 
@@ -55,6 +57,21 @@ CREATE TABLE `yt_table_name` (
     `modify_by` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '修改人ID',
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='表说明';
+```
+
+### 中台对接表SQL示例
+
+```sql
+CREATE TABLE `yt_mid_table_name` (
+    `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `eid` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '企业ID',
+    `external_code` VARCHAR(64) DEFAULT NULL COMMENT '外部编码',
+    `external_name` VARCHAR(255) DEFAULT NULL COMMENT '外部名称',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `modify_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+    `rec_status` TINYINT(4) NOT NULL DEFAULT 1 COMMENT '记录状态：1-有效，0-删除',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='中台对接表说明';
 ```
 
 ## ER图格式（Mermaid）

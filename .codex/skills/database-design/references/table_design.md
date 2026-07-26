@@ -155,10 +155,11 @@ id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID'
 
 ### NOT NULL约束
 
-**原则**: 【强制】所有字段（含时间戳字段）不能为null，且都需要有默认值（NOT NULL DEFAULT XXX）
+**原则**: 【强制】后端业务表字段（含时间戳字段）不能为null，且都需要有默认值（NOT NULL DEFAULT XXX）；中台对接表除明确必填字段外，默认允许为NULL。
 
-- **所有字段**: 必须添加 `NOT NULL` 和 `DEFAULT` 值
-- **禁止**: 不允许字段为 `NULL`（除非特殊业务需求）
+- **后端业务表字段**: 必须添加 `NOT NULL` 和 `DEFAULT` 值
+- **中台对接表字段**: 外部同步/推送字段除明确必填外，默认允许 `NULL`，不强制 `NOT NULL DEFAULT`，避免因对接数据形态不确定导致入库失败
+- **禁止**: 后端业务表不允许字段为 `NULL`（除非特殊业务需求）
 
 ### UNIQUE约束
 
@@ -225,7 +226,7 @@ status TINYINT(4) NOT NULL DEFAULT 1 COMMENT '状态：1-正常，2-禁用，3-�
 
 ## 标准字段规范
 
-### 【强制】所有表必须包含以下字段
+### 【强制】后端业务表必须包含以下字段
 
 - **id**: 自增主键，`BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT`
 - **create_time**: 创建时间，`DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP`
@@ -234,6 +235,12 @@ status TINYINT(4) NOT NULL DEFAULT 1 COMMENT '状态：1-正常，2-禁用，3-�
 - **org_id**: 机构id（后端业务表必需），`BIGINT(20) UNSIGNED NOT NULL DEFAULT 0`
 - **create_by**: 创建人（后端业务表必需），`BIGINT(20) UNSIGNED NOT NULL DEFAULT 0`
 - **modify_by**: 修改人（后端业务表必需），`BIGINT(20) UNSIGNED NOT NULL DEFAULT 0`
+
+### 【强制】中台对接表字段要求
+
+- **org_id**: 中台对接表不要求该字段，除非业务明确需要与后端租户体系直接绑定
+- **eid**: 企业ID（中台对接表必需），`VARCHAR(64) NOT NULL DEFAULT ''`
+- **外部数据字段**: 除明确必填字段外，默认允许 `NULL`，不强制设置 `NOT NULL DEFAULT`
 
 ## 表设计示例
 
@@ -308,8 +315,10 @@ CREATE TABLE `yt_order_info` (
 - [ ] 字段名是否与MySQL关键字冲突？
 
 ### 字段规范
-- [ ] 所有字段是否都设置了NOT NULL和DEFAULT值？
-- [ ] 是否包含了标准字段：id, create_time, modify_time, rec_status, org_id, create_by, modify_by？
+- [ ] 后端业务表字段是否都设置了NOT NULL和DEFAULT值？
+- [ ] 中台对接表非必填字段是否允许NULL，避免外部对接数据缺失导致入库失败？
+- [ ] 后端业务表是否包含标准字段：id, create_time, modify_time, rec_status, org_id, create_by, modify_by？
+- [ ] 中台对接表是否包含eid（VARCHAR(64)），且未强制要求org_id？
 - [ ] 时间字段是否使用DATETIME类型？
 - [ ] create_time默认值是否为CURRENT_TIMESTAMP（不自动更新）？
 - [ ] modify_time默认值是否为CURRENT_TIMESTAMP（自动更新）？
