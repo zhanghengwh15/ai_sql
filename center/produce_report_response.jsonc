@@ -1,0 +1,69 @@
+{
+  "data": [ // 响应信息，Array<Object>；响应示例未提供，字段值统一使用 Null 占位
+    {
+      "sheetId": null, // 报工Id，声明类型：int；响应示例未返回
+      "orgId": null, // 机构ID，声明类型：int；响应示例未返回
+      "produceTaskId": null, // 生产任务Id，声明类型：int；响应示例未返回
+      "shiftId": null, // 班次Id，声明类型：String；响应示例未返回
+      "shiftName": null, // 班次名称，声明类型：String；响应示例未返回
+      "shiftAlias": null, // 班次别名，声明类型：String；响应示例未返回
+      "courseId": null, // 班组id，声明类型：String；响应示例未返回
+      "courseName": null, // 班组名称，声明类型：String；响应示例未返回
+      "courseAlias": null, // 班组别名，声明类型：String；响应示例未返回
+      "batchNo": null, // 批次号，声明类型：String；响应示例未返回
+      "taskNo": null, // 任务号，声明类型：String；响应示例未返回
+      "materialId": null, // 产出物料ID，声明类型：int；响应示例未返回
+      "sendDate": null, // 报工日期，声明类型：String；响应示例未返回
+      "output": null, // 数量/实际产出，声明类型：BigDecimal；响应示例未返回
+      "status": null, // 完工状态，声明类型：int；枚举：1=完工，2=退回；响应示例未返回
+      "gradeId": null, // 等级Id，声明类型：int；响应示例未返回
+      "sheetGradeId": null, // 质检前的等级Id，声明类型：int；响应示例未返回
+      "colorId": null, // 色号Id，声明类型：int；响应示例未返回
+      "sheetBatchNo": null, // 完工批次号，声明类型：string；响应示例未返回
+      "stopTaskFlag": null, // 结束生产任务，声明类型：int；枚举：0=否，1=是；响应示例未返回
+      "partSheetFlag": null, // 含义待确认，声明类型：int；响应示例未返回
+      "factoryAreaId": null, // 工作单元id，声明类型：int；响应示例未返回
+      "factoryAreaName": null, // 工作单元名称，声明类型：String；响应示例未返回
+      "factoryAreaAlias": null, // 工作单元别名，声明类型：String；响应示例未返回
+      "checkMode": null, // 库位，声明类型：String；响应示例未返回
+      "taskFinish": null, // 仓库，声明类型：String；响应示例未返回
+      "entryStatus": null, // 仓库code，声明类型：String；响应示例未返回
+      "entryId": null, // 含义待确认，声明类型：String；响应示例未返回
+      "sheetBatchBeginTime": null, // 出库id，声明类型：int；响应示例未返回
+      "sheetBatchEndTime": null, // 仓库库存id，声明类型：int；响应示例未返回
+      "shiftSheetNo": null, // 物料批次，声明类型：String；响应示例未返回
+      "rangeWide": null, // 幅宽，声明类型：int；响应示例未返回
+      "speed": null, // 车速，声明类型：BigDecimal；响应示例未返回
+      "quantitative": null, // 定量，声明类型：BigDecimal；响应示例未返回
+      "length": null, // 长度，声明类型：int；响应示例未返回
+      "grossWeight": null, // 毛重，声明类型：int；响应示例未返回
+      "roll": null, // 母辊，声明类型：string；响应示例未返回
+      "container": null, // 容器ID，声明类型：int；响应示例未返回
+      "rollBatch": null, // 母卷批次，声明类型：String；响应示例未返回
+      "checkResult": null, // 检验结果，声明类型：int；枚举：-1=未检验，0=待定，1=不合格，2=合格；响应示例未返回
+      "checkTime": null, // 质检时间，声明类型：string；响应示例未返回
+      "gradeReason": null, // 等级原因，声明类型：string；响应示例未返回
+      "colorText": null, // 色号（文本），声明类型：String；响应示例未返回
+      "sheetEntryRemark": null, // 报工入库备注，声明类型：String；响应示例未返回
+      "mainSheetId": null, // 主车间报工ID，声明类型：int；响应示例未返回
+      "issuedType": null, // 下发方式，声明类型：int；枚举：1=下发工作中心，2=下发工作单元；响应示例未返回
+      "mainSendDate": null, // 主车间日期，声明类型：string；响应示例未返回
+      "mainFactoryAreaId": null, // 主车间工厂单元，声明类型：int；响应示例未返回
+      "mainShiftId": null, // 主车间班次ID，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "mainCourseId": null, // 主车间班组ID，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "wetWeight": null, // 报工（湿重），声明类型：BigDecimal；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "storeId": null, // 完工入库库位ID，声明类型：int；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "storeName": null, // 库位，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "storePName": null, // 仓库，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "storePCode": null, // 仓库code，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "storeCode": null, // 库位code，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "location": null, // 仓库位置，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "belongCompany": null, // 仓库所属公司，声明类型：String；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "qrcodeRecordId": null, // 条码记录ID，声明类型：int；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "note": null, // 备注，声明类型：string；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "sheetType": null, // 完工类型，声明类型：string；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "sheetTime": null, // 报工时间，声明类型：string；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+      "materialDistributionId": null // app投料同报工关联的物料投放Id，声明类型：int；响应参数表字段未带 data-> 前缀，按 data 数组元素字段处理
+    }
+  ]
+}

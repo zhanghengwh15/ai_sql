@@ -74,10 +74,11 @@
 | YEAR | - | 年份（MySQL） |
 
 **选择原则**:
-- 【强制】时间字段必须使用datetime类型，且必须有默认值
+- 【强制】时间字段必须使用datetime类型
 - 【强制】create_time默认值：CURRENT_TIMESTAMP，不自动更新
 - 【强制】modify_time默认值：CURRENT_TIMESTAMP，自动更新（ON UPDATE CURRENT_TIMESTAMP）
-- 【强制】其他时间字段默认值：'1970-01-01 08:00:00'，不自动更新
+- 【强制】后端业务表的其他时间字段默认值：'1970-01-01 08:00:00'，不自动更新
+- 【推荐】中台表的其他业务时间字段一般默认允许 NULL；只有字段参与流程状态判断、幂等或必填校验时才设置 NOT NULL 和明确默认值
 - DATE: 只需要日期（较少使用）
 
 ### 数值类型
@@ -155,10 +156,11 @@ id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID'
 
 ### NOT NULL约束
 
-**原则**: 【强制】所有字段（含时间戳字段）不能为null，且都需要有默认值（NOT NULL DEFAULT XXX）
+**原则**: 后端业务表字段默认 `NOT NULL DEFAULT XXX`；中台表除非必须，一般默认允许 `NULL`。
 
-- **所有字段**: 必须添加 `NOT NULL` 和 `DEFAULT` 值
-- **禁止**: 不允许字段为 `NULL`（除非特殊业务需求）
+- **后端业务表字段**: 必须添加 `NOT NULL` 和 `DEFAULT` 值
+- **中台表字段**: 除主键、必要业务唯一标识、状态/审计字段、明确参与必填校验或处理流程控制的字段外，一般默认允许 `NULL`
+- **上游不确定字段**: 优先使用 `NULL` 表达“缺失/未提供”，避免用 0、空字符串或哨兵时间伪造业务值
 
 ### UNIQUE约束
 
@@ -187,7 +189,7 @@ CHECK (status IN (1, 2))
 
 ### 默认值
 
-**原则**: 【强制】为所有字段设置合理的默认值
+**原则**: 后端业务表强制为所有字段设置合理的默认值；中台表仅对必须非空的字段设置默认值。
 
 **数字类型默认值**:
 - 【强制】数字类型字段的默认值必须使用数字格式，禁止使用字符串格式
@@ -308,12 +310,14 @@ CREATE TABLE `yt_order_info` (
 - [ ] 字段名是否与MySQL关键字冲突？
 
 ### 字段规范
-- [ ] 所有字段是否都设置了NOT NULL和DEFAULT值？
+- [ ] 后端业务表字段是否都设置了NOT NULL和DEFAULT值？
+- [ ] 中台表字段是否除必须非空字段外默认允许NULL？
 - [ ] 是否包含了标准字段：id, create_time, modify_time, rec_status, org_id, create_by, modify_by？
 - [ ] 时间字段是否使用DATETIME类型？
 - [ ] create_time默认值是否为CURRENT_TIMESTAMP（不自动更新）？
 - [ ] modify_time默认值是否为CURRENT_TIMESTAMP（自动更新）？
-- [ ] 其他时间字段默认值是否为'1970-01-01 08:00:00'？
+- [ ] 后端业务表其他时间字段默认值是否为'1970-01-01 08:00:00'？
+- [ ] 中台表其他业务时间字段是否除必须非空外默认允许NULL？
 
 ### 数据类型
 - [ ] 字段类型选择是否合适（选择最小合适的类型）？
