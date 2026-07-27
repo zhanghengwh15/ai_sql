@@ -88,3 +88,24 @@ CREATE TABLE `yt_production_report` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='生产报工记录表';
 
 
+ALTER TABLE `mes_sauce_disk_batch_output`
+  MODIFY COLUMN `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  ADD PRIMARY KEY (`id`);
+
+  ALTER TABLE `mes_sauce_batch_output`
+  MODIFY COLUMN `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  ADD PRIMARY KEY (`id`);
+
+    ALTER TABLE `mes_sauce_wrap_batch_output`
+  MODIFY COLUMN `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  ADD PRIMARY KEY (`id`);
+
+
+  ALTER TABLE `mes_sauce_disk_batch_output`
+  MODIFY COLUMN `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID';
+
+    ALTER TABLE `mes_sauce_batch_output`
+  MODIFY COLUMN `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID';
+
+    ALTER TABLE `mes_sauce_wrap_batch_output`
+  MODIFY COLUMN `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID';
