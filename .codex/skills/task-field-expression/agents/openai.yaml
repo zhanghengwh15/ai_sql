@@ -1,0 +1,4 @@
+interface:
+  display_name: "任务字段表达式"
+  short_description: "根据任务映射上下文生成采集或出仓字段表达式"
+  default_prompt: "使用 $task-field-expression 为任务字段映射生成表达式。"

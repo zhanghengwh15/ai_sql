@@ -1,0 +1,4 @@
+interface:
+  display_name: "接口请求 JSONC 模板"
+  short_description: "将接口文档转换为可直接导入并自动创建变量的请求 JSONC 模板"
+  default_prompt: "使用 $api-request-jsonc-template 将这份接口文档转换为可直接导入的变量化请求 Body JSONC。"
