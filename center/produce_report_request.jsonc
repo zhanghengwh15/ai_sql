@@ -1,0 +1,27 @@
+{
+  "dataList": [ // 生产工单报工信息集，Array<Object>；必填
+    {
+      "containerCode": "", // 容器编码，String；非必填；示例为空字符串
+      "courseAlias": "xiao", // 报工班组别名，String；是否必填根据工单模板配置
+      "customFields": {}, // 自定义字段，Object（文档声明：JSON）；键名与自定义字段名称一致，仅支持数据来源为“自定义”且字段类型为文本、数值输入、时间或单选的字段；示例为空对象
+      "factoryAreaAlias": "luckds", // 报工工厂单元别名，String；必填
+      "gradeName": "", // 等级名称，String；非必填；示例为空字符串
+      "materialCode": "only-two", // 报工物料编码，String；必填
+      "output": 8.88, // 报工数量，Number；必填
+      "outputType": 1, // 产出类型，Number（文档声明：Int）；必填；枚举：1=主产品，2=联产品，3=副产品，4=拆解产品，5=计划外产出
+      "produceWorkOrderNo": "", // 生产工单号，String；必填；示例为空字符串
+      "remark": "", // 备注，String；请求参数表未列出；示例为空字符串
+      "sendDate": "2024-10-31", // 报工日期，String（文档声明：Date）；必填；示例格式：yyyy-MM-dd
+      "sheetBatchNo": "", // 完工批次号，String；工单模板配置编码方案时非必填，否则必填；示例为空字符串
+      "sheetTime": "2024-10-31 11:20:20", // 报工时间，String（文档声明：Date）；非必填，为空时系统默认等于创建时间；示例格式：yyyy-MM-dd HH:mm:ss
+      "sheetUsername": "xiaobin", // 报工人用户名（账号），String；必填
+      "shiftAlias": "zao", // 报工班次别名，String；必填
+      "storeCode": "", // 入库库位编码，String；非必填；报工生成入库单据、退回生成出库单据时需要；示例为空字符串
+      "uniqueCode": "sdfs23sdf2r32sdf", // 第三方系统唯一标识，String；必填
+      "uniqueType": 0 // 第三方系统唯一标识存在时的处理方式，Number（文档声明：Int）；必填；枚举：0=直接报错，1=先退回再报工，2=只退回不报工
+    }
+  ],
+  "eid": "3554a324d6ff45f895d16edf978f6e05", // 企业 EID，String；必填
+  "operateUserId": 500136, // 操作用户 ID，Number；请求参数表未列出
+  "orgId": 1000738 // 组织 ID，Number；请求参数表未列出
+}
