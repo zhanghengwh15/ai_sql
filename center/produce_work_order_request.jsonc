@@ -1,0 +1,15 @@
+{
+  "eid": "${eid}", // 企业EID，String；必填
+  "pageNum": "${pageNum}", // 页码，Int；必填
+  "pageSize": "${pageSize}", // 每页记录数，Int；必填
+  "beginTime": "${beginTime}", // 单据更新时间的开始时间，String；必填；格式：yyyy-MM-dd HH:mm:ss
+  "endTime": "${endTime}", // 单据更新时间的结束时间，String；必填；格式：yyyy-MM-dd HH:mm:ss
+  "workOrderTemplateName": "${workOrderTemplateName}", // 工单模板名称，String；非必填
+  "workOrderTemplateNameList": [ // 工单模板名称列表，List<String>；非必填；请求示例未提供，按参数表补充
+    "${workOrderTemplateNameList}"
+  ],
+  "factoryAreaNames": "${factoryAreaNames}", // 工厂单元别名，String；非必填；查询多个工厂单元时使用英文逗号分隔
+  "auditStatus": "${auditStatus}", // 审核状态，Int；非必填；0=未审核，1=已审核，为空时查询全部
+  "issueStatus": "${issueStatus}", // 下发状态，Int；非必填；0=未下发，1=已下发，为空时查询全部
+  "executeStatus": "${executeStatus}" // 执行状态，Int；非必填；0=未开始，1=生产中，2=已完成，3=已取消，4=已关闭，5=已暂停，为空时查询全部
+}
