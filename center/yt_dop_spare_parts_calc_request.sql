@@ -2,7 +2,7 @@
 -- 业务名称：燕塘备件领料申请单 request 计算任务
 -- 主表：    yt_dop_spare_parts
 -- 触发方式：定时计算任务
--- 数据库：  MySQL 8.0.14+
+-- 数据库：  MySQL 8.0.4+
 -- 说明：    将 detail_field 数组转换为 request 数组：
 --          materialCode -> sku
 --          totalWarehousingCount -> qtyOrdered
@@ -82,51 +82,33 @@ LIMIT 50;
 
 -- ---------------------------------------------------------------------
 -- 2. 生成通过完整性校验的 request 成功子集
---    JSON_ARRAYAGG 窗口按 line_no 排序，确保数组顺序与原明细一致
+--    GROUP_CONCAT 按 line_no 排序，确保数组顺序与原明细一致
 -- ---------------------------------------------------------------------
 CREATE TEMPORARY TABLE `yt_dop_spare_parts_request_tmp`
 ENGINE = InnoDB
 AS
 SELECT
-    `calculated`.`id`,
-    `calculated`.`source_modify_time`,
-    `calculated`.`detail_count`,
-    `calculated`.`request`
+    `aggregated`.`id`,
+    `aggregated`.`source_modify_time`,
+    `aggregated`.`detail_count`,
+    CAST(
+        CONCAT('[', `aggregated`.`request_items`, ']')
+        AS JSON
+    ) AS `request`
 FROM (
     SELECT
         `scope`.`id`,
-        `scope`.`source_modify_time`,
-        JSON_LENGTH(`scope`.`detail_field`) AS `detail_count`,
-        COUNT(*) OVER (
-            PARTITION BY `scope`.`id`
-        ) AS `expanded_count`,
-        SUM(
-            CASE
-                WHEN `detail`.`material_code` IS NULL
-                    OR `detail`.`material_code` = ''
-                    OR `detail`.`qty_ordered` IS NULL
-                    OR `detail`.`qty_ordered` = ''
-                THEN 1
-                ELSE 0
-            END
-        ) OVER (
-            PARTITION BY `scope`.`id`
-        ) AS `invalid_detail_count`,
-        JSON_ARRAYAGG(
+        MIN(`scope`.`source_modify_time`) AS `source_modify_time`,
+        MIN(JSON_LENGTH(`scope`.`detail_field`)) AS `detail_count`,
+        GROUP_CONCAT(
             JSON_OBJECT(
                 'qtyOrdered', `detail`.`qty_ordered`,
                 'lineNo', CAST(`detail`.`line_no` AS CHAR),
                 'sku', `detail`.`material_code`
             )
-        ) OVER (
-            PARTITION BY `scope`.`id`
             ORDER BY `detail`.`line_no`
-            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-        ) AS `request`,
-        ROW_NUMBER() OVER (
-            PARTITION BY `scope`.`id`
-            ORDER BY `detail`.`line_no` DESC
-        ) AS `row_pick`
+            SEPARATOR ','
+        ) AS `request_items`
     FROM `yt_dop_spare_parts_scope_tmp` AS `scope`
     CROSS JOIN JSON_TABLE(
         `scope`.`detail_field`,
@@ -138,11 +120,23 @@ FROM (
                 NULL ON EMPTY NULL ON ERROR
         )
     ) AS `detail`
-) AS `calculated`
-WHERE `calculated`.`row_pick` = 1
-    AND `calculated`.`invalid_detail_count` = 0
-    AND `calculated`.`expanded_count` = `calculated`.`detail_count`
-ORDER BY `calculated`.`id`
+    GROUP BY `scope`.`id`
+    HAVING COUNT(*) = MIN(JSON_LENGTH(`scope`.`detail_field`))
+        AND SUM(
+            CASE
+                WHEN `detail`.`material_code` IS NULL
+                    OR `detail`.`material_code` = ''
+                    OR `detail`.`qty_ordered` IS NULL
+                    OR `detail`.`qty_ordered` = ''
+                THEN 1
+                ELSE 0
+            END
+        ) = 0
+) AS `aggregated`
+WHERE `aggregated`.`request_items` IS NOT NULL
+    AND OCTET_LENGTH(`aggregated`.`request_items`) < @@SESSION.group_concat_max_len
+    AND JSON_VALID(CONCAT('[', `aggregated`.`request_items`, ']')) = 1
+ORDER BY `aggregated`.`id`
 LIMIT 5000;
 
 ALTER TABLE `yt_dop_spare_parts_request_tmp`
