@@ -1,11 +1,35 @@
 ---
 name: sql-temp-table-writer
-description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQL，用于"原始数据 → 处理 → 写入目标表 → 回写状态"的离线/定时跑批场景。当用户需要把单条复杂的多表写入/状态回写 SQL 改写成"先锁定数据范围、再校验聚合、最后回写状态"的安全分阶段 SQL，或要求使用临时表中转、需要附带分步 SELECT 验证语句、需要防止"中间过程未处理却把状态置为已完成"的逻辑漏洞时，使用此技能。
+description: 为 MySQL 8 离线/定时跑批编写安全 SQL。对短小的单表批量更新，直接输出带 `modify_time` 时间窗口、`ORDER BY id` 和 `LIMIT` 的单条 UPDATE，不创建临时表；对"原始数据 → 处理 → 写入目标表 → 回写状态"这类复杂多表、聚合或需要成功子集校验的场景，使用 TEMPORARY TABLE 分阶段处理。用户要求使用临时表中转、附带分步 SELECT 验证、或防止"中间过程未处理却把状态置为已完成"时，使用此技能。
 ---
 
 # SQL 临时表批处理编写规范
 
 ## 适用场景
+
+### 0. 先判定是否需要临时表
+
+满足以下条件时，视为**简单单表批量更新**：只更新一张表；无聚合、JSON 拼装、多步派生或跨表写入；无需通过另一张表或中间结果确认「成功子集」；所有业务条件均可在同一条 `WHERE` 中准确表达。**此时不要创建临时表 A 或 Staging，也不要输出 DROP 和分步验证 SQL；直接输出一条 UPDATE。**
+
+直接 UPDATE 必须同时满足：
+
+- 【强制】`WHERE` 包含待处理/幂等条件，且本次更新会使该行不再满足该条件，例如 `cal_status = 1` 更新为 `cal_status = 2`；不要只更新 `modify_time` 后反复命中同一批数据。
+- 【强制】**时间窗口**：包含 `modify_time >= NOW() - INTERVAL N HOUR`（或等价时间过滤），优先使用带索引、带更新语义的 `modify_time`。
+- 【强制】**LIMIT 兜底**：显式 `LIMIT N`（建议 `LIMIT 5000` 或按业务批次大小），防止单次跑批撑爆内存 / binlog。
+- 【强制】单表 `UPDATE` 使用 `ORDER BY id` 配合 `LIMIT`，保证批次稳定、可重入、可断点续跑；多表 `UPDATE` 不适用此分支，应进入临时表/成功子集流程。
+
+```sql
+UPDATE `yt_xxx_original_data`
+SET `cal_status` = 2,
+    `modify_time` = NOW(),
+    `modify_by` = '{{operator}}'
+WHERE `cal_status` = 1
+  AND `modify_time` >= NOW() - INTERVAL 24 HOUR
+ORDER BY `id`
+LIMIT 5000;
+```
+
+出现任一情形时，使用下方临时表流程：需要跨表 `JOIN` 才能确认更新成功、需要写入另一张表后再回写状态、存在聚合 / `JSON_ARRAYAGG` / 去重 / 多步派生，或需要固定本批候选范围以便后续多步复用。
 
 把"一次性、长 SQL、写入 + 回写状态"的批处理脚本，重写为：
 
@@ -23,8 +47,8 @@ description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQ
 - 【强制】脚本**结尾**必须再次 `DROP TEMPORARY TABLE IF EXISTS` 全部临时表，释放连接资源
 - 【强制】临时表命名以 `_tmp` 结尾，前缀沿用主表前缀（含项目前缀），便于排查
 
-### 2. CREATE TEMPORARY TABLE 必须加保护条件
-每个 `CREATE TEMPORARY TABLE ... AS SELECT` 都必须包含以下两类保护条件，避免误锁全表 / 处理量爆炸：
+### 2. 临时表范围必须加保护条件
+使用临时表流程时，每个用于确定批次范围的 `CREATE TEMPORARY TABLE ... AS SELECT` 都必须包含以下保护条件，避免误锁全表 / 处理量爆炸：
 
 - 【强制】**时间窗口**：必须包含 `modify_time >= NOW() - INTERVAL N HOUR`（或等价的时间过滤），优先用 `modify_time` 这种带索引、带更新语义的字段
 - 【强制】**LIMIT 兜底**：必须显式 `LIMIT N`（建议 `LIMIT 5000` 或按业务批次大小），防止单次跑批撑爆内存 / binlog
@@ -59,15 +83,15 @@ description: 基于临时表 (TEMPORARY TABLE) 模式编写 MySQL 8 批处理 SQ
 - `WITH cte AS (...)` 公共表表达式（CTE）
 - `ROW_NUMBER() OVER (PARTITION BY ...)` 等窗口函数
 
-### 5. 分步 SELECT 验证语句（必须附带）
-每个临时表创建之后、每个 INSERT/UPDATE 之前，必须给出对应的**调试用 SELECT**，方便上线前手工对数。详见 [references/validation-template.md](references/validation-template.md)。
+### 5. 临时表流程的分步 SELECT 验证语句（必须附带）
+临时表流程中，每个临时表创建之后、每个 INSERT/UPDATE 之前，必须给出对应的**调试用 SELECT**，方便上线前手工对数。简单单表 UPDATE 分支不要求附带验证 SQL，除非用户明确要求。详见 [references/validation-template.md](references/validation-template.md)。
 
 - 【强制】验证用 SQL 必须写在 **`/* ... */` 块注释**里（块内为可执行 `SELECT`），**不要用**行首 `--` 逐行注释验证语句 —— 运维复制到客户端时，去掉最外层 `/*` `*/` 即可整段执行，避免逐行删 `--`。
 - 块首行用简短标题标注「验证 SQL-1」…便于与 [validation-template.md](references/validation-template.md) 对应。
 
-## 输出模板（直接套用）
+## 输出模板（复杂临时表流程）
 
-下面是规范化模板。把表名、字段名、过滤条件替换为具体业务即可。
+先按 §0 分流：简单单表批量更新只输出 §0 的单条 `UPDATE` 模式；下面模板只用于需要临时表的复杂场景。把表名、字段名、过滤条件替换为具体业务即可。
 
 ```sql
 -- =====================================================================
@@ -243,9 +267,10 @@ DROP TEMPORARY TABLE IF EXISTS yt_xxx_staging_tmp;
 
 ## 编写流程（生成 SQL 时按顺序执行）
 
-1. 先和用户确认：源表、目标表、状态字段、关联唯一键、需要聚合成 JSON 的字段、本次跑批的时间窗口
-2. 套用上面"输出模板"，把占位符替换为业务字段
-3. 检查清单（在交付前自检）：
+1. 先判断是否满足 §0 的简单单表 UPDATE 条件；满足则仅输出带待处理条件、`modify_time` 时间窗口、`ORDER BY id` 和 `LIMIT` 的单条 UPDATE。
+2. 不满足时，和用户确认：源表、目标表、状态字段、关联唯一键、需要聚合成 JSON 的字段、本次跑批的时间窗口。
+3. 套用复杂临时表模板，把占位符替换为业务字段。
+4. 复杂临时表流程检查清单（在交付前自检）：
    - [ ] 头部 DROP TEMPORARY TABLE 是否完整覆盖所有临时表？
    - [ ] 尾部 DROP TEMPORARY TABLE 是否完整覆盖所有临时表？
    - [ ] 每个 CREATE TEMPORARY TABLE 是否同时带 `modify_time` 时间窗口和 `LIMIT`？
@@ -253,7 +278,7 @@ DROP TEMPORARY TABLE IF EXISTS yt_xxx_staging_tmp;
    - [ ] 是否给出了至少 5 组验证用 `SELECT`（锁定范围、补全结果、范围 vs 成功子集数量对比、最终表抽样、状态分布），且均以 **`/* ... */` 块**写在脚本中便于复制执行？
    - [ ] 所有 SQL 关键字大写、字段加反引号、注释清楚？
    - [ ] 多租户场景：是否在过滤条件里带了 `org_id`？
-4. 详细的"分步验证 SELECT"模板见 [references/validation-template.md](references/validation-template.md)
+5. 详细的"分步验证 SELECT"模板见 [references/validation-template.md](references/validation-template.md)
 
 ## 与项目其他规范的关系
 
