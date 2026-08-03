@@ -1,0 +1,33 @@
+{
+  "data": { // 响应信息，Object；参数表声明为 JsonArray，但 data>records 及分页字段表明其为分页对象，响应示例未提供
+    "total": null, // 总条数，声明类型：Number；响应示例未返回
+    "size": null, // 分页大小，声明类型：Number；响应示例未返回
+    "current": null, // 当前页码，声明类型：Number；响应示例未返回
+    "pages": null, // 总页数，声明类型：Number；响应示例未返回
+    "records": [ // 分页记录，Array<Object>；响应示例未提供，使用一条字段骨架展示元素结构
+      {
+        "eid": null, // 企业ID，声明类型：String；响应示例未返回
+        "workOrderTemplateName": null, // 工单模板名称，声明类型：String；响应示例未返回
+        "workOrderNumber": null, // 生产工单号，声明类型：String；响应示例未返回
+        "factoryAlias": null, // 工厂单元别名，声明类型：String；响应示例未返回
+        "materialCode": null, // 产品物料编码，声明类型：String；响应示例未返回
+        "planFinishQuantity": null, // 计划产量，声明类型：String；响应示例未返回
+        "measureUnit": null, // 产品计量单位，声明类型：String；响应示例未返回
+        "planBeginTime": null, // 计划开始时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "planEndTime": null, // 计划结束时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "realBeginTime": null, // 实际开始时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "realEndTime": null, // 实际结束时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "auditStatus": null, // 审核状态，声明类型：Int；枚举：0=未审核，1=已审核；响应示例未返回
+        "issueStatus": null, // 下发状态，声明类型：Int；枚举：0=未下发，1=已下发；响应示例未返回
+        "executeStatus": null, // 执行状态，声明类型：Int；枚举：0=未开始，1=生产中，2=已完成，3=已取消，4=已关闭，5=已暂停；响应示例未返回
+        "createTime": null, // 创建时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "modifyTime": null, // 更新时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "modifyByName": null, // 更新人账号（用户名），声明类型：String；响应示例未返回
+        "auditTime": null, // 审核时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "auditByName": null, // 审核人账号（用户名），声明类型：String；响应示例未返回
+        "issueTime": null, // 下发时间，声明类型：Date；响应示例未返回，日期格式待实际响应确认
+        "issueByName": null // 下发人账号（用户名），声明类型：String；响应示例未返回
+      }
+    ]
+  }
+}

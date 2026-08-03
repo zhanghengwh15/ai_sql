@@ -66,7 +66,7 @@ SELECT
     `detail`.`material_code` AS `sku`,
     `detail`.`qty_ordered`
 FROM `yt_dop_spare_parts_scope_tmp` AS `scope`
-INNER JOIN JSON_TABLE(
+CROSS JOIN JSON_TABLE(
     `scope`.`detail_field`,
     '$[*]' COLUMNS (
         `line_no` FOR ORDINALITY,
@@ -128,7 +128,7 @@ FROM (
             ORDER BY `detail`.`line_no` DESC
         ) AS `row_pick`
     FROM `yt_dop_spare_parts_scope_tmp` AS `scope`
-    INNER JOIN JSON_TABLE(
+    CROSS JOIN JSON_TABLE(
         `scope`.`detail_field`,
         '$[*]' COLUMNS (
             `line_no` FOR ORDINALITY,
