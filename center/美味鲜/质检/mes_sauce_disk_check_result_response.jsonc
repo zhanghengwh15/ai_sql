@@ -1,0 +1,26 @@
+{
+  "code": 75200, // 响应状态码，Number；响应参数表未列出
+  "data": [ // 圆盘送检结果集合，Array
+    {
+      "initiateUser": "蒋小冰", // 送检人，String
+      "qualified": null, // 本次送检整体判定，Null；文档声明 String：0-不合格，1-合格，2-未判定
+      "batchNo": "YP2026061803-03", // 批次号，String
+      "initiateTime": "2026-06-20 08:37:17", // 送检时间，String；示例格式 yyyy-MM-dd HH:mm:ss
+      "acceptCode": null, // 送检单号，Null；文档声明 String
+      "checkNum": 1, // 送检次数，Number；文档声明 integer(int32)
+      "lineName": "圆盘制曲产线", // 产线名称，String
+      "materialCode": "ZB01000082", // 物料编码，String
+      "checkItemVOList": [], // 检验指标结果集，Array
+      "lineCode": "YP", // 产线编码，String
+      "sampleName": "广式试验大曲", // 样品名称，String
+      "feedbackTime": "2026-06-22 17:18:59", // 结果反馈时间，String；示例格式 yyyy-MM-dd HH:mm:ss
+      "materialName": "广式试验大曲", // 物料名称，String
+      "processName": "制曲", // 工序名称，String；参数表说明误写为工序编码
+      "processCode": "ZQ", // 工序编码，String
+      "sampleCode": "ZB01000082", // 样品编码，String
+      "statusName": "已检验", // 送检状态，String；文档描述 01-已发起、02-已送检、03-已接收、04-已检验，示例实际返回状态名称
+      "samplingPoint": "YP06" // 取样点，String
+    }
+  ],
+  "msg": "成功" // 响应消息，String；响应参数表未列出
+}

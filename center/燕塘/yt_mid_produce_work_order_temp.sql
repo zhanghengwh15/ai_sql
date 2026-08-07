@@ -79,17 +79,17 @@ LIMIT 20;
 
 -- ---------------------------------------------------------------------
 -- 3. 按优先级计算门店编码
---    1) trace_number 非空：870kw
---    2) 默认仓库为 tbYAAAy7mTy76fiu：821kw
---    3) 其他：820kw
+--    1) trace_number 非空：870
+--    2) 默认仓库为 tbYAAAy7mTy76fiu：821
+--    3) 其他：820
 -- ---------------------------------------------------------------------
 UPDATE `yt_mid_produce_work_order` AS `work_order`
 INNER JOIN `yt_mid_produce_work_order_scope_tmp` AS `scope`
     ON `scope`.`id` = `work_order`.`id`
 SET `work_order`.`store_code` = CASE
-        WHEN `work_order`.`trace_number` IS NOT NULL THEN '870kw'
-        WHEN `work_order`.`moren_warehouse_id` = 'tbYAAAy7mTy76fiu' THEN '821kw'
-        ELSE '820kw'
+        WHEN `work_order`.`trace_number` IS NOT NULL THEN '870'
+        WHEN `work_order`.`moren_warehouse_id` = 'tbYAAAy7mTy76fiu' THEN '821'
+        ELSE '820'
     END,
     `work_order`.`modify_time` = NOW()
 WHERE `work_order`.`calculate_status` = 1;
@@ -126,9 +126,9 @@ INNER JOIN `yt_mid_produce_work_order_scope_tmp` AS `scope`
 WHERE `work_order`.`calculate_status` = 1
     AND `work_order`.`modify_time` >= NOW() - INTERVAL 24 HOUR
     AND `work_order`.`store_code` = CASE
-        WHEN `work_order`.`trace_number` IS NOT NULL THEN '870kw'
-        WHEN `work_order`.`moren_warehouse_id` = 'tbYAAAy7mTy76fiu' THEN '821kw'
-        ELSE '820kw'
+        WHEN `work_order`.`trace_number` IS NOT NULL THEN '870'
+        WHEN `work_order`.`moren_warehouse_id` = 'tbYAAAy7mTy76fiu' THEN '821'
+        ELSE '820'
     END
 ORDER BY `work_order`.`id`
 LIMIT 5000;
