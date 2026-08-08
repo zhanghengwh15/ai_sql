@@ -101,7 +101,7 @@ FROM (
         MIN(`scope`.`source_modify_time`) AS `source_modify_time`,
         MIN(JSON_LENGTH(`scope`.`detail_field`)) AS `detail_count`,
         GROUP_CONCAT(
-            JSON_OBJECT(
+            JSON_OBJECT(   
                 'qtyOrdered', `detail`.`qty_ordered`,
                 'lineNo', CAST(`detail`.`line_no` AS CHAR),
                 'sku', `detail`.`material_code`
