@@ -15,7 +15,7 @@ description: 为 MySQL 8 离线/定时跑批编写安全 SQL。对短小的单�
 
 - 【强制】`WHERE` 包含待处理/幂等条件，且本次更新会使该行不再满足该条件，例如 `cal_status = 1` 更新为 `cal_status = 2`；不要只更新 `modify_time` 后反复命中同一批数据。
 - 【强制】**时间窗口**：包含 `modify_time >= NOW() - INTERVAL N HOUR`（或等价时间过滤），优先使用带索引、带更新语义的 `modify_time`。
-- 【强制】**LIMIT 兜底**：显式 `LIMIT N`（建议 `LIMIT 5000` 或按业务批次大小），防止单次跑批撑爆内存 / binlog。
+- 【强制】**LIMIT 兜底**：显式 `LIMIT N`；未明确指定批次大小时必须使用 `LIMIT 1000`。仅在用户明确指定且已评估数据库负载后才可提高上限，防止单次跑批撑爆内存 / binlog。
 - 【强制】单表 `UPDATE` 使用 `ORDER BY id` 配合 `LIMIT`，保证批次稳定、可重入、可断点续跑；多表 `UPDATE` 不适用此分支，应进入临时表/成功子集流程。
 
 ```sql
@@ -26,7 +26,7 @@ SET `cal_status` = 2,
 WHERE `cal_status` = 1
   AND `modify_time` >= NOW() - INTERVAL 24 HOUR
 ORDER BY `id`
-LIMIT 5000;
+LIMIT 1000;
 ```
 
 出现任一情形时，使用下方临时表流程：需要跨表 `JOIN` 才能确认更新成功、需要写入另一张表后再回写状态、存在聚合 / `JSON_ARRAYAGG` / 去重 / 多步派生，或需要固定本批候选范围以便后续多步复用。
@@ -51,7 +51,7 @@ LIMIT 5000;
 使用临时表流程时，每个用于确定批次范围的 `CREATE TEMPORARY TABLE ... AS SELECT` 都必须包含以下保护条件，避免误锁全表 / 处理量爆炸：
 
 - 【强制】**时间窗口**：必须包含 `modify_time >= NOW() - INTERVAL N HOUR`（或等价的时间过滤），优先用 `modify_time` 这种带索引、带更新语义的字段
-- 【强制】**LIMIT 兜底**：必须显式 `LIMIT N`（建议 `LIMIT 5000` 或按业务批次大小），防止单次跑批撑爆内存 / binlog
+- 【强制】**LIMIT 兜底**：必须显式 `LIMIT N`；未明确指定批次大小时必须使用 `LIMIT 1000`。仅在用户明确指定且已评估数据库负载后才可提高上限，防止单次跑批撑爆内存 / binlog
 - 【强制】`ORDER BY id` 配合 LIMIT，保证可重入、可断点续跑
 
 ### 3. 状态回写的逻辑安全
@@ -66,7 +66,7 @@ LIMIT 5000;
 
 当本批**无聚合、无 JSON 拼装、无多步中间结果**，仅做「同步表 ↔ 业务表」键上更新时，**不必再建第二张 Staging 临时表**：
 
-1. **范围临时表扩列**：`CREATE TEMPORARY TABLE ..._scope_tmp AS SELECT id, 关联键列, 写入所需载荷列 ... FROM 源表 WHERE ... 时间窗口 ORDER BY id LIMIT N`，一次锁定并带上 `UPDATE` 要用的字段（避免重复扫源表条件，且批次内载荷固定）。
+1. **范围临时表扩列**：未指定批次大小时使用 `CREATE TEMPORARY TABLE ..._scope_tmp AS SELECT id, 关联键列, 写入所需载荷列 ... FROM 源表 WHERE ... 时间窗口 ORDER BY id LIMIT 1000`，一次锁定并带上 `UPDATE` 要用的字段（避免重复扫源表条件，且批次内载荷固定）。
 2. **业务表 `UPDATE`**：`UPDATE 业务表 t JOIN ..._scope_tmp s ON t.键 = s.键 JOIN 源表 d ON d.id = s.id SET ...`，并用 `d` 上仍为「待处理」的状态条件防止并发重复改。
 3. **同步状态回写**：`UPDATE 源表 d JOIN ..._scope_tmp s ... INNER JOIN 业务表 t ON ... SET 完成态`，与第 2 步 **同一套命中条件**，保证「能置完成态」当且仅当「业务侧已命中」。
 
@@ -122,7 +122,7 @@ CREATE TEMPORARY TABLE yt_xxx_original_data_tmp AS (
     AND batch_no IS NOT NULL                                     -- 业务必要条件
     AND modify_time >= NOW() - INTERVAL 24 HOUR                  -- 【强制】时间窗口
   ORDER BY id
-  LIMIT 5000                                                     -- 【强制】LIMIT 兜底
+  LIMIT 1000                                                     -- 【默认】LIMIT 兜底
 );
 
 /* 验证 SQL-1：确认本次锁定的范围（执行前去掉本块首尾块注释定界符）
@@ -183,7 +183,7 @@ CREATE TEMPORARY TABLE yt_xxx_staging_tmp AS (
       WHERE modify_time >= NOW() - INTERVAL 100 HOUR
     )
   GROUP BY docket_code
-  LIMIT 5000                                                     -- 【强制】LIMIT 兜底
+  LIMIT 1000                                                     -- 【默认】LIMIT 兜底
 );
 
 /* 验证 SQL-3：锁定范围 vs Staging（差额即被过滤、不应回写成功）
