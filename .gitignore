@@ -1,0 +1,3 @@
+# Codex analysis intermediates and locally installed dependencies.
+.codex_work_*/all_match_result.json
+.codex_work_*/node_modules
