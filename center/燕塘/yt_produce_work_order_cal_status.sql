@@ -8,7 +8,10 @@
 --   2. 当前记录相对紧邻上一条记录的 dop_modify_time 发生变化时：
 --      - status 发生变化：cal_status = 1；
 --      - status 保持一致：cal_status = 2；
---   3. 没有上一条记录或 dop_modify_time 未变化时，不回写 cal_status。
+--   3. 同一 eid + doc_no 只有一条有效记录时：
+--      - status = 0：cal_status = 2；
+--      - status <> 0 或 status IS NULL：cal_status = 1；
+--   4. 存在上一条记录但 dop_modify_time 未变化时，不回写 cal_status。
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -79,6 +82,7 @@ LIMIT 20;
 -- 2. Staging：计算当前记录与紧邻上一条历史记录的差异
 --    窗口函数必须先在派生表中计算，再由外层 WHERE 过滤结果；
 --    不能在 WINDOW 子句后使用 HAVING 过滤窗口函数别名。
+--    若没有上一条记录，则按当前 status 直接计算 cal_status。
 -- ---------------------------------------------------------------------
 CREATE TEMPORARY TABLE `yt_produce_work_order_staging_tmp` AS
 SELECT
@@ -91,6 +95,9 @@ SELECT
     `history_order`.`prev_status`,
     `history_order`.`prev_dop_modify_time`,
     CASE
+        WHEN `history_order`.`prev_id` IS NULL
+             AND (`history_order`.`status` <=> 0) THEN 2
+        WHEN `history_order`.`prev_id` IS NULL THEN 1
         WHEN NOT (
             `history_order`.`prev_status` <=> `history_order`.`status`
         ) THEN 1
@@ -127,16 +134,18 @@ FROM (
     WHERE `work_order`.`rec_status` = 1
 ) AS `history_order`
 WHERE `history_order`.`id` = `history_order`.`scope_id`
-  AND `history_order`.`prev_id` IS NOT NULL
   AND `history_order`.`scope_modify_time` >= NOW() - INTERVAL 24 HOUR
-  AND NOT (
-      `history_order`.`prev_dop_modify_time`
-          <=> `history_order`.`dop_modify_time`
+  AND (
+      `history_order`.`prev_id` IS NULL
+      OR NOT (
+          `history_order`.`prev_dop_modify_time`
+              <=> `history_order`.`dop_modify_time`
+      )
   )
 ORDER BY `history_order`.`id`
 LIMIT 1000;
 
-/* 验证 SQL-2：检查当前记录与紧邻上一条记录的对比结果
+/* 验证 SQL-2：检查单条记录规则及相邻历史记录对比结果
 SELECT
     `id`,
     `eid`,
@@ -150,6 +159,15 @@ SELECT
 FROM `yt_produce_work_order_staging_tmp`
 ORDER BY `id`
 LIMIT 20;
+
+SELECT
+    `status`,
+    `new_cal_status`,
+    COUNT(*) AS `single_doc_cnt`
+FROM `yt_produce_work_order_staging_tmp`
+WHERE `prev_id` IS NULL
+GROUP BY `status`, `new_cal_status`
+ORDER BY `status`, `new_cal_status`;
 */
 
 /* 验证 SQL-3：范围与成功子集数量、计算结果分布
