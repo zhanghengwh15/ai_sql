@@ -1,0 +1,4 @@
+interface:
+  display_name: "DBS 远程数据库查询"
+  short_description: "通过 Archery 发现实例并执行远程只读数据库查询"
+  default_prompt: "使用 $dbs-query 选择已授权的远程数据库目标并执行只读查询。"

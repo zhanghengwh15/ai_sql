@@ -1,0 +1,38 @@
+{
+  "default_site": "poit",
+  "sites": {
+    "poit": {
+      "base_url": "https://dbs.poi-t.cn",
+      "username": "heng.zhang"
+    }
+  },
+  "targets": {
+    "meiweixian-prod-material": {
+      "aliases": [
+        "美味鲜生产物料"
+      ],
+      "database": "poit-material",
+      "db_type": "mysql",
+      "description": "美味鲜生产物料数据库",
+      "instance_id": 75,
+      "instance_name": "美味鲜生产MySQL",
+      "schema": "",
+      "site": "poit"
+    },
+    "yantang-prod-data": {
+      "aliases": [
+        "燕塘生产 DBS",
+        "燕塘数据中台",
+        "燕塘生产数据中心"
+      ],
+      "database": "poit-data-center-data",
+      "db_type": "mysql",
+      "description": "燕塘生产环境数据中心数据库",
+      "instance_id": 66,
+      "instance_name": "燕塘生产MySQL",
+      "schema": "",
+      "site": "poit"
+    }
+  },
+  "version": 1
+}

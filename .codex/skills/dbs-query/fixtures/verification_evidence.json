@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "dbsTargetAlias": "confirmed-mysql8-readonly",
+  "dbVersionSummary": "MySQL 8.0.x (product/version summary only)",
+  "sqlModeSummary": "STRICT_TRANS_TABLES,NO_ZERO_DATE",
+  "readonlyChecks": [
+    {
+      "sqlSha256": "0123456789abcdef",
+      "whereSummary": "updated_at >= :window_start",
+      "orderBySummary": "id ASC",
+      "limit": 100,
+      "rowCount": 42
+    }
+  ],
+  "rewriteComparison": {
+    "beforeSqlSha256": "0123456789abcdef",
+    "afterSqlSha256": "fedcba9876543210",
+    "whereSummary": "updated_at >= :window_start",
+    "orderBySummary": "id ASC",
+    "limit": 100,
+    "beforeRowCount": 42,
+    "afterRowCount": 42,
+    "firstDifference": null,
+    "conclusion": "PASS"
+  },
+  "capturedAt": "2026-09-11T09:00:00+08:00"
+}

@@ -1,0 +1,13 @@
+{
+  "targetAlias": "confirmed-mysql8-readonly",
+  "whereSummary": "id BETWEEN 100 AND 200",
+  "orderBySummary": "id ASC",
+  "limit": 100,
+  "beforeSqlSha256": "0123456789abcdef",
+  "afterSqlSha256": "fedcba9876543210",
+  "beforeRowCount": 2,
+  "afterRowCount": 2,
+  "columnCount": 2,
+  "firstDifference": null,
+  "conclusion": "PASS"
+}

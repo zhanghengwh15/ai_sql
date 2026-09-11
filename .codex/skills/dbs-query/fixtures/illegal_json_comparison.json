@@ -1,0 +1,16 @@
+{
+  "case": "JSON_VALUE_RETURNING_vs_JSON_EXTRACT_CAST",
+  "documentDigest": "sha256:0123456789abcdef",
+  "path": "$.amount",
+  "returningType": "DECIMAL(12,2)",
+  "jsonValueReturning": {
+    "status": "NULL_OR_ERROR_TARGET_DEPENDENT",
+    "errorCode": "INVALID_JSON_DOCUMENT"
+  },
+  "rewrittenExpression": {
+    "status": "NULL_OR_ERROR_TARGET_DEPENDENT",
+    "errorCode": "INVALID_JSON_DOCUMENT"
+  },
+  "conclusion": "NOT_VERIFIED",
+  "note": "No raw JSON document or row value is retained; run both expressions on a user-confirmed read-only target."
+}

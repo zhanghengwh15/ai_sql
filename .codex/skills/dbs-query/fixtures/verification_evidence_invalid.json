@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "dbsTargetAlias": "confirmed-mysql8-readonly",
+  "dbVersionSummary": "MySQL 8.0.x",
+  "sqlModeSummary": "STRICT_TRANS_TABLES",
+  "readonlyChecks": [
+    {
+      "sqlSha256": "0123456789abcdef",
+      "whereSummary": "id > 0",
+      "orderBySummary": "id ASC",
+      "limit": 1001,
+      "rowCount": 2,
+      "rows": [[1, "must-not-be-in-evidence"]]
+    }
+  ],
+  "rewriteComparison": {
+    "beforeSqlSha256": "0123456789abcdef",
+    "afterSqlSha256": "fedcba9876543210",
+    "whereSummary": "id > 0",
+    "orderBySummary": "id ASC",
+    "limit": 100,
+    "beforeRowCount": 2,
+    "afterRowCount": 2,
+    "firstDifference": null,
+    "conclusion": "PASS"
+  },
+  "capturedAt": "not-a-timestamp",
+  "password": "must-not-be-in-evidence"
+}
