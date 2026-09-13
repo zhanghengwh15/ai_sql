@@ -2,7 +2,7 @@
 
 ## 需要手工维护的配置
 
-统一编辑仓库文件：
+统一编辑仓库文件（只包含非敏感配置）：
 
 ```text
 .codex/skills/dbs-query/config/dbs-config.json
@@ -81,7 +81,26 @@ CLI 默认自动读取该文件。其他部署方式可使用全局参数 `--con
 
 Target 名称只能使用字母、数字、点、下划线和连字符。可以直接编辑 JSON，也可以用 `target add` 创建；覆盖同名 Target 必须显式传 `--replace`。
 
-## 禁止写入配置的内容
+## 用户目录密码配置
+
+CLI 默认从当前用户主目录读取 `.dbs_config.json`：macOS/Linux 为 `~/.dbs_config.json`，Windows 为 `%USERPROFILE%\.dbs_config.json`。也可以通过全局参数 `--secrets <path>` 或环境变量 `DBS_SECRET_FILE` 覆盖路径。
+
+文件示例：
+
+```json
+{
+  "version": 1,
+  "sites": {
+    "poit": {
+      "password": "your-password"
+    }
+  }
+}
+```
+
+该文件只在用户目录维护，禁止提交到项目。macOS/Linux 权限应为 `0600`；Windows 使用当前用户目录并依赖用户文件权限。查询类命令在 Session 不存在时会自动使用该密码登录并保存 Session。
+
+## 禁止写入共享配置的内容
 
 配置文件可能进入 Git，因此只保存 URL、用户名和数据库定位信息。禁止写入密码、Cookie、Session ID 或 CSRF Token。
 

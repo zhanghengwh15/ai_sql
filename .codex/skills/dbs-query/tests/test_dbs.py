@@ -225,6 +225,40 @@ class ConfigurationTests(unittest.TestCase):
                 store.load_config()
             self.assertEqual("CONFIG_INVALID", error.exception.code)
 
+    def test_reads_password_only_from_user_secret_config(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "dbs-config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "default_site": "private",
+                        "sites": {
+                            "private": {
+                                "base_url": "https://dbs.example.com",
+                                "username": "tester",
+                            }
+                        },
+                        "targets": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            secret_path = root / ".dbs_config.json"
+            secret_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "sites": {"private": {"password": "secret-value"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            store = dbs.Store(root / "state", config_path, secret_path)
+            self.assertEqual("secret-value", store.resolve_password("private"))
+            self.assertIsNone(store.resolve_password("missing"))
+
 
 class CliFlowTests(unittest.TestCase):
     @classmethod
@@ -246,6 +280,10 @@ class CliFlowTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.home = Path(self.temp_dir.name) / "dbs-home"
         self.config_path = Path(self.temp_dir.name) / "dbs-config.json"
+        self.secret_path = Path(self.temp_dir.name) / ".dbs_config.json"
+        self.secret_path.write_text(
+            json.dumps({"version": 1, "sites": {}}), encoding="utf-8"
+        )
         self.config_path.write_text(
             json.dumps(
                 {
@@ -275,6 +313,8 @@ class CliFlowTests(unittest.TestCase):
             str(self.home),
             "--config",
             str(self.config_path),
+            "--secrets",
+            str(self.secret_path),
             *args,
         ]
         with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -289,6 +329,24 @@ class CliFlowTests(unittest.TestCase):
             "-p",
             "test-password",
         )
+
+    def test_auto_login_uses_user_secret_config_when_session_is_missing(self):
+        self.secret_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "sites": {"private-test": {"password": "test-password"}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        code, payload = self.run_cli(
+            "instance", "list", "--db-type", "mysql"
+        )
+        self.assertEqual(0, code)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(1, payload["count"])
+        self.assertEqual(1, FakeArcheryHandler.counts["authenticate"])
 
     def test_discovery_cache_target_query_and_desc(self):
         code, payload = self.login()

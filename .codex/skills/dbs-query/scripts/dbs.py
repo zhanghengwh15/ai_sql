@@ -24,6 +24,7 @@ DEFAULT_SITE = "poit"
 DEFAULT_BASE_URL = "https://dbs.poi-t.cn"
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = SKILL_ROOT / "config" / "dbs-config.json"
+DEFAULT_SECRET_PATH = Path.home() / ".dbs_config.json"
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
 MAX_SQL_CHARS = 100_000
@@ -154,9 +155,12 @@ def load_json(path: Path, default: Dict[str, Any]) -> Dict[str, Any]:
 
 
 class Store:
-    def __init__(self, home: Path, config_path: Path):
+    def __init__(
+        self, home: Path, config_path: Path, secret_path: Optional[Path] = None
+    ):
         self.home = home.expanduser().resolve()
         self.config_path = config_path.expanduser().resolve()
+        self.secret_path = (secret_path or DEFAULT_SECRET_PATH).expanduser().resolve()
         self.sessions_dir = self.home / "sessions"
         self.cache_dir = self.home / "cache"
 
@@ -257,6 +261,40 @@ class Store:
     def save_config(self, config: Dict[str, Any]) -> None:
         atomic_write_json(self.config_path, config, mode=0o644, private_directory=False)
 
+    def load_secret_config(self) -> Dict[str, Any]:
+        config = load_json(self.secret_path, {"version": CONFIG_VERSION, "sites": {}})
+        version = config.get("version", CONFIG_VERSION)
+        if version != CONFIG_VERSION:
+            raise DbsError(
+                "SECRET_CONFIG_INVALID",
+                f"密码配置文件版本 {version!r} 不受支持，当前版本为 {CONFIG_VERSION}",
+            )
+        sites = config.get("sites", {})
+        if not isinstance(sites, dict):
+            raise DbsError("SECRET_CONFIG_INVALID", "密码配置文件的 sites 必须是 JSON 对象")
+        for site, site_config in sites.items():
+            validate_alias(site, "站点名")
+            if not isinstance(site_config, dict):
+                raise DbsError(
+                    "SECRET_CONFIG_INVALID", f"站点 {site!r} 的密码配置必须是 JSON 对象"
+                )
+            password = site_config.get("password")
+            if password is not None and (
+                not isinstance(password, str) or not password
+            ):
+                raise DbsError(
+                    "SECRET_CONFIG_INVALID", f"站点 {site!r} 的 password 必须是非空字符串"
+                )
+        return config
+
+    def resolve_password(self, site: str) -> Optional[str]:
+        config = self.load_secret_config()
+        site_config = config.get("sites", {}).get(site, {})
+        if not isinstance(site_config, dict):
+            return None
+        password = site_config.get("password")
+        return password if isinstance(password, str) and password else None
+
     def default_site(self) -> str:
         site = self.load_config().get("default_site") or DEFAULT_SITE
         if not isinstance(site, str):
@@ -338,6 +376,38 @@ class Store:
                 "AUTH_REQUIRED",
                 f"未找到站点 {site!r} 用户 {resolved_username!r} 的有效登录态",
             )
+        return session
+
+    def ensure_session(
+        self, site: str, username: Optional[str], timeout: int
+    ) -> Dict[str, Any]:
+        """Load a cached Session or refresh it from the user-only password file."""
+        resolved_username = self.resolve_username(site, username)
+        try:
+            return self.load_session(site, resolved_username)
+        except DbsError as exc:
+            if exc.code != "AUTH_REQUIRED":
+                raise
+        password = self.resolve_password(site)
+        if password is None:
+            raise DbsError(
+                "AUTH_REQUIRED",
+                f"未找到有效登录态；请执行 auth login，或在 {self.secret_path} 配置该站点 password",
+            )
+        site_config = self.get_site(site)
+        csrf_token, sessionid = ArcheryClient.login(
+            site_config["base_url"], resolved_username, password, timeout=timeout
+        )
+        session = {
+            "version": CONFIG_VERSION,
+            "site": site,
+            "username": resolved_username,
+            "base_url": site_config["base_url"],
+            "csrf_token": csrf_token,
+            "sessionid": sessionid,
+            "logged_in_at": utc_now(),
+        }
+        self.save_session(session)
         return session
 
     def remove_session(
@@ -669,7 +739,7 @@ def client_for(
     store: Store, site: str, username: Optional[str], timeout: int
 ) -> Tuple[ArcheryClient, str]:
     site_config = store.get_site(site)
-    session = store.load_session(site, username)
+    session = store.ensure_session(site, username, timeout)
     return (
         ArcheryClient(
             site_config["base_url"],
@@ -886,7 +956,11 @@ def command_auth_login(args: argparse.Namespace, store: Store) -> Dict[str, Any]
             "USERNAME_REQUIRED",
             f"站点 {args.site!r} 未配置 username，请编辑 {store.config_path} 或传 -u",
         )
-    password = args.password or os.environ.get("DBS_PASSWORD")
+    password = (
+        args.password
+        or os.environ.get("DBS_PASSWORD")
+        or store.resolve_password(args.site)
+    )
     if password is None:
         password = getpass.getpass("Password: ")
     csrf_token, sessionid = ArcheryClient.login(
@@ -1159,6 +1233,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="站点和 Target JSON 配置文件",
     )
     parser.add_argument(
+        "--secrets",
+        type=Path,
+        default=Path(os.environ.get("DBS_SECRET_FILE", str(DEFAULT_SECRET_PATH))),
+        help="用户目录密码 JSON 文件，默认 ~/.dbs_config.json",
+    )
+    parser.add_argument(
         "--timeout", type=int, default=30, help="HTTP 超时秒数，默认 30"
     )
     parser.add_argument("--compact", action="store_true", help="输出单行 JSON")
@@ -1262,7 +1342,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
         return 2
     try:
-        store = Store(args.home, args.config)
+        store = Store(args.home, args.config, args.secrets)
         if hasattr(args, "site") and args.site is None:
             args.site = store.default_site()
         payload = args.handler(args, store)

@@ -10,13 +10,15 @@ DBS=.codex/skills/dbs-query/dbs.py
 
 ## 认证
 
-先在 `config/dbs-config.json` 配好 URL 和用户名，然后交互输入密码：
+先在 `config/dbs-config.json` 配好 URL 和用户名，并在用户目录 `~/.dbs_config.json`（Windows 为 `%USERPROFILE%\.dbs_config.json`）配置密码；没有密码文件时才交互输入密码：
 
 ```bash
 $DBS auth login
 $DBS auth status
 $DBS auth logout
 ```
+
+查询、表结构和资源发现命令在本地 Session 缺失时会自动使用该密码登录。密码文件路径可通过 `--secrets <path>` 或 `DBS_SECRET_FILE` 覆盖，不能放入项目配置。
 
 自定义 Archery 站点：
 

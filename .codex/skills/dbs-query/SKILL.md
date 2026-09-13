@@ -23,7 +23,7 @@ description: 通过远程 DBS/Archery 发现当前用户可读的数据库实例
 ## 执行流程
 
 1. 读取 `config/dbs-config.json` 中的站点、默认用户名和 Target。用户提供客户、系统或数据库名称时，先运行 `target list --search <关键词>` 匹配名称、说明和别名。
-2. 运行 `auth status --site <site>` 检查本地登录态。未登录或 Session 失效时，让用户在自己的终端交互执行 `auth login --site <site>`；用户名默认从 JSON 读取，不要索要、复述或保存密码。
+2. 运行 `auth status --site <site>` 检查本地登录态。查询类命令会在本地 Session 缺失时自动从用户目录 `~/.dbs_config.json`（Windows 为 `%USERPROFILE%\.dbs_config.json`）读取密码并登录；没有该文件或密码时，再让用户在自己的终端交互执行 `auth login --site <site>`。
 3. 已配置 Target 必须唯一对应站点、实例和数据库；上下文不足时列出候选并让用户选择，禁止猜测生产或测试环境。
 4. 没有合适 Target 时，依次运行 `instance list`、`database list`，确认用户选择后运行 `target add`。实例与数据库首次请求后会缓存，不要为了预热而遍历所有实例。
 5. 字段或表结构不确定时先运行 `desc`，再生成查询。
@@ -38,13 +38,13 @@ description: 通过远程 DBS/Archery 发现当前用户可读的数据库实例
 - 本技能不提供任何远程写入命令。用户要求修改数据时，说明该 Skill 仅支持只读查询。
 - 只使用 `can_read` 接口返回的实例和实例资源接口返回的数据库创建 Target。
 - MySQL 和 PostgreSQL 可建立 SQL Target。Redis 实例只在发现结果中展示，当前不执行 Redis 查询。
-- Cookie、Session ID、CSRF Token、密码不得进入命令参数、代码、文档、日志或最终回复。AI 不使用隐藏的 `-p` 测试参数。
-- `config/dbs-config.json` 可以保存 URL 和用户名，但禁止保存密码、Cookie、Session ID 或 CSRF Token。
+- Cookie、Session ID、CSRF Token、密码不得进入项目代码、共享配置、文档、日志或最终回复。AI 不使用隐藏的 `-p` 测试参数。
+- `config/dbs-config.json` 只能保存 URL、用户名和 Target；密码仅允许保存到用户目录的 `~/.dbs_config.json`（Windows 为 `%USERPROFILE%\.dbs_config.json`），该文件必须设置为仅当前用户可读（Unix `0600`）。
 - `AUTH_REQUIRED` 时只提示重新登录，不循环重试。资源权限变化时最多使用一次 `--refresh` 重新发现。
 
 ## 资源与配置
 
-- 站点、用户名、私有部署 URL 和常用 Target 统一维护在 [config/dbs-config.json](config/dbs-config.json)。
+- 站点、用户名、私有部署 URL 和常用 Target 统一维护在 [config/dbs-config.json](config/dbs-config.json)。密码维护在用户目录的 `.dbs_config.json`，不加入项目。
 - 维护或排查 Archery 请求时读取 [references/archery-api.md](references/archery-api.md)。
 - 检查本地状态、权限或迁移配置时读取 [references/configuration.md](references/configuration.md)。
 - `db-query` 是本地数据库 Skill；不要用它代替本 Skill，也不要把本 Skill 的 Session 写入本地数据库凭据文件。
