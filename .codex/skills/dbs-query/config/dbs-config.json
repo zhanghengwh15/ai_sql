@@ -19,6 +19,18 @@
       "schema": "",
       "site": "poit"
     },
+    "shede-prod-product": {
+      "aliases": [
+        "舍得生产"
+      ],
+      "database": "poit-product",
+      "db_type": "mysql",
+      "description": "舍得生产任务数据库",
+      "instance_id": 52,
+      "instance_name": "舍得生产MySQL",
+      "schema": "",
+      "site": "poit"
+    },
     "yantang-prod-data": {
       "aliases": [
         "燕塘生产 DBS",
