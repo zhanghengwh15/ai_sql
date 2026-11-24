@@ -17,7 +17,10 @@ CREATE TABLE `mwx_production_statistics` (
   PRIMARY KEY (`id`)
 ) COMMENT='美味鲜-产线产量统计';
 
--- 给这个新增一个计算表
+-- 给这个新增一个计算表  两个字段  对应的是整点的时刻，比较靠近的整点时间计算差值。同时还需要加上对应的表计的 code 
+
+
+
 
 
 
