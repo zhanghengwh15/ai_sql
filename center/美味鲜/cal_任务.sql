@@ -22,12 +22,9 @@ CREATE TABLE `mwx_production_statistics` (
   KEY `idx_factory_line_hour_status` (`factory_code`, `workline_code`, `hour_24num`, `cal_status`, `rec_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='美味鲜-产线产量统计';
 
--- 计算任务须在同一连接串行执行，出错时回滚。
+-- 清理本次任务可能残留的临时表。
 DROP TEMPORARY TABLE IF EXISTS `mwx_production_statistics_scope_tmp`, `mwx_production_statistics_closest_tmp`,
     `mwx_production_statistics_winner_tmp`, `mwx_production_statistics_baseline_tmp`;
-
--- 从确定候选到回写使用同一事务。
-START TRANSACTION;
 
 -- 按 create_time 归入最近整点（半点归下一个），整点过 30 分钟再结算。
 CREATE TEMPORARY TABLE `mwx_production_statistics_scope_tmp` (
@@ -73,7 +70,14 @@ SELECT winner.`id`, winner.`factory_code`, winner.`workline_code`,
            WHERE history.`factory_code` <=> winner.`factory_code`
              AND history.`workline_code` = winner.`workline_code`
              AND history.`hour_24num` = winner.`hour_24num` - INTERVAL 1 HOUR
-             AND history.`cal_status` = 2
+             AND (
+                 history.`cal_status` = 2
+                 OR (
+                     history.`cal_status` = 3
+                     AND history.`total_output` = 0
+                     AND history.`hour_24num` = CAST(DATE(history.`hour_24num`) AS DATETIME)
+                 )
+             )
              AND history.`rec_status` = 1
            ORDER BY history.`id`
            LIMIT 1
@@ -96,9 +100,11 @@ CREATE TEMPORARY TABLE `mwx_production_statistics_baseline_tmp` (
 ) ENGINE=InnoDB AS
 SELECT `factory_code`, `workline_code`, `total_output`,
        `hour_24num` + INTERVAL 1 HOUR AS `next_hour`
-FROM `mwx_production_statistics_winner_tmp`;
+FROM `mwx_production_statistics_winner_tmp`
+WHERE `total_output` > 0
+   OR `hour_24num` = CAST(DATE(`hour_24num`) AS DATETIME);
 
--- 入选置为 2，优先减同批上一小时，缺基准则差值留空；本批未入选置为 3。
+-- 有产量的入选样本置为 2，零产量样本保留整点但置为 3；本批未入选置为 3。
 UPDATE `mwx_production_statistics` AS src
 INNER JOIN `mwx_production_statistics_scope_tmp` AS candidate ON candidate.`id` = src.`id`
 LEFT JOIN `mwx_production_statistics_winner_tmp` AS winner ON winner.`id` = src.`id`
@@ -106,16 +112,16 @@ LEFT JOIN `mwx_production_statistics_baseline_tmp` AS baseline
     ON baseline.`factory_code` <=> winner.`factory_code`
    AND baseline.`workline_code` = winner.`workline_code`
    AND baseline.`next_hour` = winner.`hour_24num`
-SET src.`cal_status` = IF(winner.`id` IS NULL, 3, 2),
+SET src.`cal_status` = IF(winner.`id` IS NULL OR winner.`total_output` = 0, 3, 2),
     src.`hour_24num` = winner.`hour_24num`,
-    src.`time_output` = winner.`total_output` - COALESCE(baseline.`total_output`, winner.`historical_output`),
+    src.`time_output` = CASE
+        WHEN winner.`total_output` = 0 THEN NULL
+        ELSE winner.`total_output` - COALESCE(baseline.`total_output`, winner.`historical_output`)
+    END,
     src.`modify_time` = NOW(),
     src.`modify_by` = 0
 WHERE src.`cal_status` = 1
   AND src.`rec_status` = 1;
-
--- 提交本批计算结果。
-COMMIT;
 
 -- 清理本次任务的临时表。
 DROP TEMPORARY TABLE IF EXISTS `mwx_production_statistics_scope_tmp`, `mwx_production_statistics_closest_tmp`,
